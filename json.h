@@ -2,6 +2,7 @@
  * json.h --- JSON.
  *
  * Copyright (c) 2016 Paul Ward <asmodai@gmail.com>
+ * Copyright (c) 2011 Joseph A. Adams <joeyadams3.14159@gmail.com>
  *
  * Author:     Paul Ward <asmodai@gmail.com>
  * Maintainer: Paul Ward <asmodai@gmail.com>

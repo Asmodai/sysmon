@@ -2,6 +2,7 @@
  * json.c --- JSON parser implementation.
  *
  * Copyright (c) 2016 Paul Ward <asmodai@gmail.com>
+ * Copyright (c) 2011 Joseph A. Adams <joeyadams3.14159@gmail.com>
  *
  * Author:     Paul Ward <asmodai@gmail.com>
  * Maintainer: Paul Ward <asmodai@gmail.com>
@@ -53,12 +54,15 @@
 #include <assert.h>
 #include <stdlib.h>
 #include <string.h>
+#include <ctype.h>
 
 #ifdef HAVE_STDINT_H
 # include <stdint.h>
 #else
 # include "posix/stdint.h"
 #endif
+
+#include "utils.h"
 
 #ifdef BSD
 extern         fprintf();
@@ -72,11 +76,6 @@ extern double  strtod();
 #ifndef EXIT_FAILURE
 # define EXIT_FAILURE 1
 #endif
-
-#define out_of_memory() do {             \
-    fprintf(stderr, "Out of memory.\n"); \
-    exit(EXIT_FAILURE);                  \
-  } while (0)
 
 /*
  * Type for Unicode codepoints.
@@ -108,56 +107,66 @@ static
 int
 utf8_validate_cz(const char *s)
 {
-	unsigned char c = *s++;
-	
-	if (c <= 0x7F) {                      /* 00..7F */
-		return 1;
-	} else if (c <= 0xC1) {               /* 80..C1 */
-		/* Disallow overlong 2-byte sequence. */
-		return 0;
-	} else if (c <= 0xDF) {               /* C2..DF */
-		/* Make sure subsequent byte is in the range 0x80..0xBF. */
-		if (((unsigned char)*s++ & 0xC0) != 0x80)
-			return 0;
-		
-		return 2;
-	} else if (c <= 0xEF) {               /* E0..EF */
-		/* Disallow overlong 3-byte sequence. */
-		if (c == 0xE0 && (unsigned char)*s < 0xA0)
-			return 0;
-		
-		/* Disallow U+D800..U+DFFF. */
-		if (c == 0xED && (unsigned char)*s > 0x9F)
-			return 0;
-		
-		/* Make sure subsequent bytes are in the range 0x80..0xBF. */
-		if (((unsigned char)*s++ & 0xC0) != 0x80)
-			return 0;
-		if (((unsigned char)*s++ & 0xC0) != 0x80)
-			return 0;
-		
-		return 3;
-	} else if (c <= 0xF4) {               /* F0..F4 */
-		/* Disallow overlong 4-byte sequence. */
-		if (c == 0xF0 && (unsigned char)*s < 0x90)
-			return 0;
-		
-		/* Disallow codepoints beyond U+10FFFF. */
-		if (c == 0xF4 && (unsigned char)*s > 0x8F)
-			return 0;
-		
-		/* Make sure subsequent bytes are in the range 0x80..0xBF. */
-		if (((unsigned char)*s++ & 0xC0) != 0x80)
-			return 0;
-		if (((unsigned char)*s++ & 0xC0) != 0x80)
-			return 0;
-		if (((unsigned char)*s++ & 0xC0) != 0x80)
-			return 0;
-		
-		return 4;
-	} else {                              /* F5..FF */
-		return 0;
-	}
+  unsigned char c = *s++;
+  
+  if (c <= 0x7F) {                      /* 00..7F */
+    return 1;
+  } else if (c <= 0xC1) {               /* 80..C1 */
+    /* Disallow overlong 2-byte sequence. */
+    return 0;
+  } else if (c <= 0xDF) {               /* C2..DF */
+    /* Make sure subsequent byte is in the range 0x80..0xBF. */
+    if (((unsigned char)*s++ & 0xC0) != 0x80) {
+      return 0;
+    }
+
+    return 2;
+  } else if (c <= 0xEF) {               /* E0..EF */
+    /* Disallow overlong 3-byte sequence. */
+    if (c == 0xE0 && (unsigned char)*s < 0xA0) {
+      return 0;
+    }
+    
+    /* Disallow U+D800..U+DFFF. */
+    if (c == 0xED && (unsigned char)*s > 0x9F) {
+      return 0;
+    }
+    
+    /* Make sure subsequent bytes are in the range 0x80..0xBF. */
+    if (((unsigned char)*s++ & 0xC0) != 0x80) {
+      return 0;
+    }
+    if (((unsigned char)*s++ & 0xC0) != 0x80) {
+      return 0;
+    }
+    
+    return 3;
+  } else if (c <= 0xF4) {               /* F0..F4 */
+    /* Disallow overlong 4-byte sequence. */
+    if (c == 0xF0 && (unsigned char)*s < 0x90) {
+      return 0;
+    }
+    
+    /* Disallow codepoints beyond U+10FFFF. */
+    if (c == 0xF4 && (unsigned char)*s > 0x8F) {
+      return 0;
+    }
+    
+    /* Make sure subsequent bytes are in the range 0x80..0xBF. */
+    if (((unsigned char)*s++ & 0xC0) != 0x80) {
+      return 0;
+    }
+    if (((unsigned char)*s++ & 0xC0) != 0x80) {
+      return 0;
+    }
+    if (((unsigned char)*s++ & 0xC0) != 0x80) {
+      return 0;
+    }
+    
+    return 4;
+  } else {                              /* F5..FF */
+    return 0;
+  }
 }
 
 /* Validate a null-terminated UTF-8 string. */
@@ -165,15 +174,17 @@ static
 bool
 utf8_validate(const char *s)
 {
-	int len;
-	
-	for (; *s != 0; s += len) {
-		len = utf8_validate_cz(s);
-		if (len == 0)
-			return false;
-	}
-	
-	return true;
+  int len;
+  
+  for (; *s != 0; s += len) {
+    len = utf8_validate_cz(s);
+
+    if (len == 0) {
+      return false;
+    }
+  }
+  
+  return true;
 }
 
 /*
@@ -187,30 +198,30 @@ static
 int
 utf8_read_char(const char *s, uchar_t *out)
 {
-	const unsigned char *c = (const unsigned char*) s;
-	
-	assert(utf8_validate_cz(s));
+  const unsigned char *c = (const unsigned char*) s;
+  
+  assert(utf8_validate_cz(s));
 
-	if (c[0] <= 0x7F) {                   /* 00..7F */
-		*out = c[0];
-		return 1;
-	} else if (c[0] <= 0xDF) {            /* C2..DF (unless input is invalid) */
-		*out = ((uchar_t)c[0] & 0x1F) << 6 |
-		       ((uchar_t)c[1] & 0x3F);
-		return 2;
-	} else if (c[0] <= 0xEF) {
-		/* E0..EF */
-		*out = ((uchar_t)c[0] &  0xF) << 12 |
-		       ((uchar_t)c[1] & 0x3F) << 6  |
-		       ((uchar_t)c[2] & 0x3F);
-		return 3;
-	} else {                              /* F0..F4 (unless input is invalid) */
-		*out = ((uchar_t)c[0] &  0x7) << 18 |
-		       ((uchar_t)c[1] & 0x3F) << 12 |
-		       ((uchar_t)c[2] & 0x3F) << 6  |
-		       ((uchar_t)c[3] & 0x3F);
-		return 4;
-	}
+  if (c[0] <= 0x7F) {                   /* 00..7F */
+    *out = c[0];
+    return 1;
+  } else if (c[0] <= 0xDF) {            /* C2..DF (unless input is invalid) */
+    *out = ((uchar_t)c[0] & 0x1F) << 6 |
+           ((uchar_t)c[1] & 0x3F);
+    return 2;
+  } else if (c[0] <= 0xEF) {
+    /* E0..EF */
+    *out = ((uchar_t)c[0] &  0xF) << 12 |
+           ((uchar_t)c[1] & 0x3F) << 6  |
+           ((uchar_t)c[2] & 0x3F);
+    return 3;
+  } else {                              /* F0..F4 (unless input is invalid) */
+    *out = ((uchar_t)c[0] &  0x7) << 18 |
+           ((uchar_t)c[1] & 0x3F) << 12 |
+           ((uchar_t)c[2] & 0x3F) << 6  |
+           ((uchar_t)c[3] & 0x3F);
+    return 4;
+  }
 }
 
 /*
@@ -222,34 +233,13 @@ static
 void
 to_surrogate_pair(uchar_t unicode, uint16_t *uc, uint16_t *lc)
 {
-	uchar_t n;
-	
-	assert(unicode >= 0x10000 && unicode <= 0x10FFFF);
-	
-	n = unicode - 0x10000;
-	*uc = ((n >> 10) & 0x3FF) | 0xD800;
-	*lc = (n & 0x3FF) | 0xDC00;
-}
-
-#define is_space(c) ((c) == '\t' || (c) == '\n' || (c) == '\r' || (c) == ' ')
-#define is_digit(c) ((c) >= '0' && (c) <= '9')
-
-/* }}} */
-/* ============================================================================ */
-
-static
-char *
-json_strdup(const char *str)
-{
-  char *ret = NULL;
-
-  if ((ret = (char *)malloc(strlen(str) + 1)) == NULL) {
-    out_of_memory();
-  }
-
-  strcpy(ret, str);
-
-  return ret;
+  uchar_t n;
+  
+  assert(unicode >= 0x10000 && unicode <= 0x10FFFF);
+  
+  n = unicode - 0x10000;
+  *uc = ((n >> 10) & 0x3FF) | 0xD800;
+  *lc = (n & 0x3FF) | 0xDC00;
 }
 
 typedef struct {
@@ -262,12 +252,9 @@ static
 void
 sb_init(SB *sb)
 {
-  if ((sb->start = (char *)malloc(17)) == NULL) {
-    out_of_memory();
-  }
-
-  sb->cur = sb->start;
-  sb->end = sb->start + 16;
+  sb->start = xmalloc(17);
+  sb->cur   = sb->start;
+  sb->end   = sb->start + 16;
 }
 
 #define sb_need(sb, need) do {          \
@@ -286,12 +273,9 @@ sb_grow(SB *sb, int need)
     alloc *= 2;
   } while (alloc < length + need);
 
-  if ((sb->start = (char *)realloc(sb->start, alloc + 1)) == NULL) {
-    out_of_memory();
-  }
-
-  sb->cur = sb->start + length;
-  sb->end = sb->start + alloc;
+  sb->start = xrealloc(sb->start, alloc + 1);
+  sb->cur   = sb->start + length;
+  sb->end   = sb->start + alloc;
 }
 
 static
@@ -328,15 +312,6 @@ sb_finish(SB *sb)
 
   return sb->start;
 }
-
-/*
-static
-void
-sb_free(SB *sb)
-{
-  free(sb->start);
-}
-*/
 
 static void emit_value(SB *out, const json_node_t *node);
 static void emit_value_indented(SB                *out,
@@ -437,7 +412,7 @@ json_node_t *
 json_find_element(json_node_t *array, size_t index)
 {
   json_node_t *element = NULL;
-  int i = 0;
+  size_t       i       = 0;
 
   if (array == NULL || array->tag != JSON_ARRAY) {
     return NULL;
@@ -462,7 +437,6 @@ json_find_member(json_node_t *object, const char *name)
   if (object == NULL || object->tag != JSON_OBJECT) {
     return NULL;
   }
-
 
   json_foreach(member, object) {
     if (strcmp(member->key, name) == 0) {
@@ -489,10 +463,7 @@ mknode(json_tag_t tag)
 {
   json_node_t *ret = NULL;
 
-  if ((ret = (json_node_t *)calloc(1, sizeof(json_node_t))) == NULL) {
-    out_of_memory();
-  }
-
+  ret      = xcalloc(1, sizeof(json_node_t));
   ret->tag = tag;
 
   return ret;
@@ -530,7 +501,7 @@ mkstring(char *s)
 json_node_t *
 json_mkstring(const char *s)
 {
-  return mkstring(json_strdup(s));
+  return mkstring(strdup(s));
 }
 
 json_node_t *
@@ -622,7 +593,7 @@ json_append_member(json_node_t *object, const char *key, json_node_t *value)
   assert(object->tag == JSON_OBJECT);
   assert(value->parent == NULL);
 
-  append_member(object, json_strdup(key), value);
+  append_member(object, strdup(key), value);
 }
 
 void
@@ -631,7 +602,7 @@ json_prepend_member(json_node_t *object, const char *key, json_node_t *value)
   assert(object->tag == JSON_OBJECT);
   assert(value->parent == NULL);
 
-  value->key = json_strdup(key);
+  value->key = strdup(key);
   prepend_node(object, value);
 }
 
@@ -917,56 +888,56 @@ parse_number(const char **sp, double *out)
 {
   const char *s = *sp;
 
-	if (*s == '-') {
-		s++;
+  if (*s == '-') {
+    s++;
   }
 
-	if (*s == '0') {
-		s++;
-	} else {
-		if (!is_digit(*s)) {
-			return false;
+  if (*s == '0') {
+    s++;
+  } else {
+    if (!isdigit(*s)) {
+      return false;
     }
 
-		do {
-			s++;
-		} while (is_digit(*s));
-	}
-
-	if (*s == '.') {
-		s++;
-
-		if (!is_digit(*s)) {
-			return false;
-    }
-
-		do {
-			s++;
-		} while (is_digit(*s));
-	}
-
-	if (*s == 'E' || *s == 'e') {
-		s++;
-
-		if (*s == '+' || *s == '-') {
-			s++;
-    }
-
-		if (!is_digit(*s)) {
-			return false;
-    }
-
-		do {
-			s++;
-		} while (is_digit(*s));
-	}
-
-	if (out) {
-		*out = strtod(*sp, NULL);
+    do {
+      s++;
+    } while (isdigit(*s));
   }
 
-	*sp = s;
-	return true;  
+  if (*s == '.') {
+    s++;
+
+    if (!isdigit(*s)) {
+      return false;
+    }
+
+    do {
+      s++;
+    } while (isdigit(*s));
+  }
+
+  if (*s == 'E' || *s == 'e') {
+    s++;
+
+    if (*s == '+' || *s == '-') {
+      s++;
+    }
+
+    if (!isdigit(*s)) {
+      return false;
+    }
+
+    do {
+      s++;
+    } while (isdigit(*s));
+  }
+
+  if (out) {
+    *out = strtod(*sp, NULL);
+  }
+
+  *sp = s;
+  return true;  
 }
 
 static
@@ -980,20 +951,14 @@ static
 int
 write_hex16(char *out, uint16_t val)
 {
-	const char *hex = "0123456789ABCDEF";
-	
-	*out++ = hex[(val >> 12) & 0xF];
-	*out++ = hex[(val >> 8)  & 0xF];
-	*out++ = hex[(val >> 4)  & 0xF];
-	*out++ = hex[ val        & 0xF];
-	
-	return 4;
+  const char *hex = "0123456789ABCDEF";
+  
+  *out++ = hex[(val >> 12) & 0xF];
+  *out++ = hex[(val >> 8)  & 0xF];
+  *out++ = hex[(val >> 4)  & 0xF];
+  *out++ = hex[ val        & 0xF];
+  
+  return 4;
 }
-
-/* }}} */
-/* ============================================================================ */
-
-
-
 
 /* json.c ends here. */

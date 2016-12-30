@@ -52,7 +52,7 @@
 #include <stdio.h>
 
 #ifdef BSD
-extern perror();
+extern       perror();
 extern char *malloc(unsigned);
 #endif
 
@@ -67,6 +67,30 @@ xmalloc(size_t n)
   }
 
   return p;
+}
+
+void *
+xrealloc(void *ptr, size_t n)
+{
+  if ((ptr = realloc(ptr, n)) == 0) {
+    perror("xrealloc");
+    exit(1);
+  }
+
+  return ptr;
+}
+
+void *
+xcalloc(size_t nelem, size_t elsize)
+{
+  void *newmem = calloc(nelem ? nelem : 1, elsize ? elsize : 1);
+
+  if (newmem == NULL) {
+    perror("xcalloc");
+    exit(1);
+  }
+
+  return newmem;
 }
 
 unsigned long

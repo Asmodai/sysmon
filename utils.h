@@ -51,6 +51,8 @@
 #include <sys/types.h>
 
 void          *xmalloc(size_t);
+void          *xrealloc(void *, size_t);
+void          *xcalloc(size_t, size_t);
 unsigned long  pjw_hash(const char *);
 
 #endif /* !_utils_h_ */
