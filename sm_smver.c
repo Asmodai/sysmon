@@ -58,14 +58,19 @@
 static endpoint_t *smver_endpoint = NULL;
 static sm_smver_t *smver_instance = NULL;
 
+static const char strMajor[] = "major";
+static const char strMinor[] = "minor";
+static const char strPatch[] = "patch";
+static const char strSmVer[] = "sm_smver";
+
 void
 emit_smver(json_node_t **out)
 {
   json_node_t *ret = out ? json_mkobject() : NULL;
 
-  json_prepend_member(ret, "major", json_mknumber(VERSION_MAJOR));
-  json_prepend_member(ret, "minor", json_mknumber(VERSION_MINOR));
-  json_prepend_member(ret, "patch", json_mknumber(VERSION_PATCH));
+  json_prepend_member(ret, strMajor, json_mknumber(VERSION_MAJOR));
+  json_prepend_member(ret, strMinor, json_mknumber(VERSION_MINOR));
+  json_prepend_member(ret, strPatch, json_mknumber(VERSION_PATCH));
 
   if (out) {
     *out = ret;
@@ -84,7 +89,7 @@ sm_smver_init(void)
   }
 
   if (smver_endpoint == NULL) {
-    smver_endpoint = endpoint_create("sm_smver", smver_instance);
+    smver_endpoint = endpoint_create(strSmVer, smver_instance);
   }
 }
 

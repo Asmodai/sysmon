@@ -53,7 +53,7 @@
 
 #ifdef BSD
 extern       perror();
-extern char *malloc(unsigned);
+extern char *malloc();
 #endif
 
 void *

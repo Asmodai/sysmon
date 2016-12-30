@@ -50,14 +50,19 @@
 
 #include "json.h"
 
-/**
- * @brief Virtual function table.
+/*
+ * Virtual function table.
  */
 typedef struct {
-  int  (*get_data)(void *);             /* Method for retrieving data. */
+  int  (*get_data)(void *);             /* Method for retrieving OS data. */
   void (*emit_json)(json_node_t **);    /* Method for emitting JSON data. */
 } sm_vtable_t;
 
+/*
+ * The word `base` here isn't really true in the OO sense.  Rather, this abuses
+ * polymorphism to allow us to invoke a vtable method without having to care
+ * about using an explicit structure (such as sm_uname_t).
+ */
 typedef struct {
   sm_vtable_t *vtab;                    /* Virtual function table. */
 } sm_base_t;

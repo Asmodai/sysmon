@@ -71,22 +71,29 @@ extern perror();
 static endpoint_t *uname_endpoint = NULL;
 static sm_uname_t *uname_instance = NULL;
 
+static const char strSysname[]  = "sysname";
+static const char strNodename[] = "nodename";
+static const char strRelease[]  = "release";
+static const char strVersion[]  = "version";
+static const char strMachine[]  = "machine";
+static const char strSmUname[]  = "uname";
+
 void
 emit_uname(json_node_t **out)
 {
-  struct utsname name;
-  json_node_t *ret =  out ? json_mkobject() : NULL;
+  struct utsname  name;
+  json_node_t    *ret = out ? json_mkobject() : NULL;
 
   if ((uname(&name) != 0)) {
     perror("Unable to get UTS info.");
     exit(1);
   }
 
-  json_prepend_member(ret, "sysname",  json_mkstring(name.sysname));
-  json_prepend_member(ret, "nodename", json_mkstring(name.nodename));
-  json_prepend_member(ret, "release",  json_mkstring(name.release));
-  json_prepend_member(ret, "version",  json_mkstring(name.version));
-  json_prepend_member(ret, "machine",  json_mkstring(name.machine));
+  json_prepend_member(ret, strSysname,  json_mkstring(name.sysname));
+  json_prepend_member(ret, strNodename, json_mkstring(name.nodename));
+  json_prepend_member(ret, strRelease,  json_mkstring(name.release));
+  json_prepend_member(ret, strVersion,  json_mkstring(name.version));
+  json_prepend_member(ret, strMachine,  json_mkstring(name.machine));
 
   if (out) {
     *out = ret;
@@ -105,7 +112,7 @@ sm_uname_init(void)
   }
 
   if (uname_endpoint == NULL) {
-    uname_endpoint = endpoint_create("sm_uname", uname_instance);
+    uname_endpoint = endpoint_create(strSmUname, uname_instance);
   }  
 }
 

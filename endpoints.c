@@ -96,7 +96,7 @@ endpoint_t *
 endpoint_find(const char *name)
 {
   unsigned long  hash = pjw_hash(name);
-  endpoint_t *node = endpoints;
+  endpoint_t    *node = endpoints;
 
   while (node != NULL) {
     if (node->hash == hash) {
