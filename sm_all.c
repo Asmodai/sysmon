@@ -58,8 +58,6 @@
 static endpoint_t *all_endpoint = NULL;
 static sm_all_t   *all_instance = NULL;
 
-static const char strSmAll[] = "all";
-
 void
 emit_all(json_node_t **out)
 {
@@ -104,7 +102,7 @@ sm_all_init(void)
   }
 
   if (all_endpoint == NULL) {
-    all_endpoint = endpoint_create(strSmAll, all_instance);
+    all_endpoint = endpoint_create("all", all_instance);
   }
 }
 
