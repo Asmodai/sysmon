@@ -52,21 +52,6 @@
 #include <sys/param.h>
 
 /*
- * Define this if you have the stdint.h header file.
- */
-#define HAVE_STDINT_H
-
-/*
- * Define this if you have the stdbool.h header file.
- */
-#define HAVE_STDBOOL_H
-
-/*
- * Define this if you have the sys/utsname.h header file.
- */
-#define HAVE_SYS_UTSNAME_H
-
-/*
  * Default port on which we listen.
  */
 #define DEFAULT_PORT 7070
@@ -161,6 +146,7 @@
 #include "support/platform.h"
 #include "support/machine.h"
 #include "support/support.h"
+#include "support/features.h"
 
 #endif  /* !_CONFIG_H_ */
 
