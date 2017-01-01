@@ -154,6 +154,14 @@
  */
 #define MIN_WOULDBLOCK_DELAY 100L
 
+/*
+ * Pull in compiler/platform/etc here.
+ */
+#include "support/compiler.h"
+#include "support/platform.h"
+#include "support/machine.h"
+#include "support/support.h"
+
 #endif  /* !_CONFIG_H_ */
 
 /* config.h ends here. */

@@ -1,3 +1,5 @@
+#include "config.h"
+
 #include <ctype.h>
 #include <sys/param.h>
 #include <sys/types.h>
@@ -21,7 +23,7 @@ static double powersOf10[] = {
   1.0e8,
   1.0e16,
   1.0e32,
-#ifndef BSD
+#if __WORDSIZE == 64
   1.0e64,
   1.0e128,
   1.0e256

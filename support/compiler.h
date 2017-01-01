@@ -1,11 +1,11 @@
 /*
- * endpoint.c --- Endpoints implementation.
+ * compiler.h --- Compiler detection.
  *
  * Copyright (c) 2016 Paul Ward <asmodai@gmail.com>
  *
  * Author:     Paul Ward <asmodai@gmail.com>
  * Maintainer: Paul Ward <asmodai@gmail.com>
- * Created:    29 Dec 2016 23:24:18
+ * Created:    31 Dec 2016 08:34:30
  */
 /* {{{ License: */
 /*
@@ -40,87 +40,43 @@
 /* }}} */
 
 /**
- * @file endpoint.c
+ * @file compiler.h
  * @author Paul Ward
- * @brief Endpoints implementation.
+ * @brief Compiler detection.
  */
 
-#include "config.h"
+#ifndef _compiler_h_
+#define _compiler_h_
 
-#include <sys/param.h>
-#include <sys/types.h>
+#define COMPILER_GCC        0x01000000  /* GNU C++ (g++) compiler.          */
+#define COMPILER_GCC27      0x01000001  /* GCC 2.7.x.                       */
+#define COMPILER_GCC30      0x01000002  /* GCC 3.0.x.                       */
+#define COMPILER_UNKNOWN    0x80000000  /* Unknown or unsupported compiler. */
 
-#include <stdlib.h>
-#include <stdio.h>
-#include <string.h>
-#include <syslog.h>
 
-#include "utils.h"
-#include "endpoints.h"
-
-#if PLATFORM_EQ(PLATFORM_BSD)
-# if PLATFORM_LT(PLATFORM_BSD, PLATFORM_BSDOS)
-extern char *strdup(const char *);
+#if defined(__GNUC__)
+# if (__GNUC__ == 2) && (__GNUC_MINOR__ < 7)
+#  error "This compiler is too old!"
+# elif (__GNUC__ == 2) && (__GNUC_MINOR__ == 7)
+#  define COMPILER COMPILER_GCC27
+# elif (__GNUC__ == 3) && (__GNUC_MINOR__ == 0)
+#  define COMPILER COMPILER_GCC30
+# else
+#  define COMPILER COMPILER_GCC
 # endif
+#elif
+# define COMPILER COMPILER_UNKNOWN
 #endif
 
-endpoint_t *endpoints = NULL;
+#define COMPILER_EQ(__c) \
+  ((COMPILER & __c) == __c)
 
-void
-endpoint_init(void)
-{
-  endpoints = NULL;
-}
+#define COMPILER_GT(__f,__c) \
+  ((COMPILER & __f) == __f) && (COMPILER >= __c)
 
-endpoint_t *
-endpoint_create(const char *name, const void *instance)
-{
-  endpoint_t *node = xmalloc(sizeof(endpoint_t));
+#define COMPILER_LT(__f,__c) \
+  ((COMPILER & __f) == __f) && (COMPILER <  __c)
 
-  node->hash     = pjw_hash(name);
-  node->name     = strdup(name);
-  node->instance = instance;
-  node->next     = NULL;
-  node->prev     = NULL;
+#endif /* !_compiler_h_ */
 
-  if (endpoints == NULL) {
-    endpoints = node;
-    goto out;
-  }
-
-  endpoints->prev = node;
-  node->next      = endpoints;
-  endpoints       = node;
-
-out:
-  return node;
-}
-
-endpoint_t *
-endpoint_find(const char *name)
-{
-  unsigned long  hash = pjw_hash(name);
-  endpoint_t    *node = endpoints;
-
-  while (node != NULL) {
-    if (node->hash == hash) {
-      return node;
-    }
-
-    node = node->next;
-  }
-
-  return NULL;
-}
-
-void
-endpoint_traverse(void (*callback)(const void *))
-{
-  endpoint_t *node = endpoints;
-
-  for (; node != NULL; node = node->next) {
-    (callback)(node->instance);
-  }
-}
-
-/* endpoint.c ends here. */
+/* compiler.h ends here. */

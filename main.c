@@ -85,6 +85,8 @@ main(void)
     (inst->vtab->emit_json)(&obj);
 
     printf("%s\n", json_stringify(obj, NULL));
+
+    free(obj);
   }
 
   return 0;

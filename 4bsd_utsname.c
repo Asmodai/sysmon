@@ -45,10 +45,10 @@
  * @brief 4BSD `uname` implementation.
  */
 
-#include <sys/param.h>
+#include "config.h"
 
-#ifndef BSD
-# error "BSD code will not compile."
+#if !PLATFORM_EQ(PLATFORM_BSD)
+# error "You don't want this."
 #else
 
 # include <stdio.h>
@@ -128,14 +128,10 @@ uname(struct utsname *name)
   sprintf(name->machine, "%s", MACHINE);
   sprintf(name->sysname,
           "%s", 
-# if defined(ULTRIX)
-          "ULTRIX"
-# else
-#  if defined(BSD)
+# if PLATFORM_EQ(PLATFORM_BSD)
           "BSD"
-#  else
+# else 
           "UNKNOWN"
-#  endif
 # endif
           );
 

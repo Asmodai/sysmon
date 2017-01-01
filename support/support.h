@@ -1,11 +1,11 @@
 /*
- * endpoint.c --- Endpoints implementation.
+ * support.h --- Support stuff.
  *
  * Copyright (c) 2016 Paul Ward <asmodai@gmail.com>
  *
  * Author:     Paul Ward <asmodai@gmail.com>
  * Maintainer: Paul Ward <asmodai@gmail.com>
- * Created:    29 Dec 2016 23:24:18
+ * Created:    31 Dec 2016 20:20:25
  */
 /* {{{ License: */
 /*
@@ -40,87 +40,50 @@
 /* }}} */
 
 /**
- * @file endpoint.c
+ * @file support.h
  * @author Paul Ward
- * @brief Endpoints implementation.
+ * @brief Support stuff.
  */
 
-#include "config.h"
+#ifndef _support_h_
+#define _support_h_
 
-#include <sys/param.h>
-#include <sys/types.h>
+#include "platform.h"
 
-#include <stdlib.h>
-#include <stdio.h>
-#include <string.h>
-#include <syslog.h>
-
-#include "utils.h"
-#include "endpoints.h"
-
-#if PLATFORM_EQ(PLATFORM_BSD)
-# if PLATFORM_LT(PLATFORM_BSD, PLATFORM_BSDOS)
-extern char *strdup(const char *);
+#if defined(__WORDSIZE)
+# if __WORDSIZE == 64
+#  define BITS_64
+# else
+#  define BITS_32
 # endif
+#else
+# define BITS_32
+# define __WORDSIZE  32
 #endif
 
-endpoint_t *endpoints = NULL;
 
-void
-endpoint_init(void)
-{
-  endpoints = NULL;
-}
+#if PLATFORM_EQ(PLATFORM_BSD)
+# if PLATFORM_EQ(PLATFORM_42BSD) || PLATFORM_EQ(PLATFORM_43BSD) || \
+  PLATFORM_EQ(PLATFORM_44BSD)
+#  include <machine/endian.h>
+# elif PLATFORM_EQ(PLATFORM_ULTRIX)
+#  define BIG_ENDIAN    3412
+#  define LITTLE_ENDIAN 1234
+#  if ARCHITECTURE_EQ(ARCHITECTURE_VAX)
+#   define BYTE_ORDER LITTLE_ENDIAN
+#  elif ARCHITECTURE_EQ(ARCHITECTURE_MIPS)
+/* TODO: fixme. */
+#   define BYTE_ORDER LITTLE_ENDIAN
+#  endif
+# endif
+#elif PLATFORM_EQ(PLATFORM_UNIX)
+# include <endian.h>
+#else
+# define BIG_ENDIAN    3412
+# define LITTLE_ENDIAN 1234
+# define BYTE_ORDER    LITTLE_ENDIAN
+#endif
 
-endpoint_t *
-endpoint_create(const char *name, const void *instance)
-{
-  endpoint_t *node = xmalloc(sizeof(endpoint_t));
+#endif /* !_support_h_ */
 
-  node->hash     = pjw_hash(name);
-  node->name     = strdup(name);
-  node->instance = instance;
-  node->next     = NULL;
-  node->prev     = NULL;
-
-  if (endpoints == NULL) {
-    endpoints = node;
-    goto out;
-  }
-
-  endpoints->prev = node;
-  node->next      = endpoints;
-  endpoints       = node;
-
-out:
-  return node;
-}
-
-endpoint_t *
-endpoint_find(const char *name)
-{
-  unsigned long  hash = pjw_hash(name);
-  endpoint_t    *node = endpoints;
-
-  while (node != NULL) {
-    if (node->hash == hash) {
-      return node;
-    }
-
-    node = node->next;
-  }
-
-  return NULL;
-}
-
-void
-endpoint_traverse(void (*callback)(const void *))
-{
-  endpoint_t *node = endpoints;
-
-  for (; node != NULL; node = node->next) {
-    (callback)(node->instance);
-  }
-}
-
-/* endpoint.c ends here. */
+/* support.h ends here. */

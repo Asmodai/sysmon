@@ -64,8 +64,8 @@
 #include "sm_uname.h"
 #include "endpoints.h"
 
-#ifdef BSD
-extern perror();
+#if PLATFORM_LT(PLATFORM_BSD, PLATFORM_ULTRIX)
+extern void perror(char *);
 #endif
 
 static endpoint_t *uname_endpoint = NULL;
@@ -85,7 +85,7 @@ emit_uname(json_node_t **out)
   json_node_t    *ret = out ? json_mkobject() : NULL;
 
   if ((uname(&name) != 0)) {
-    perror("Unable to get UTS info.");
+    perror("Unable to get uname from kernel");
     exit(1);
   }
 

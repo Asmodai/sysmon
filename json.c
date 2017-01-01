@@ -46,9 +46,8 @@
  * @brief JSON parser implementation.
  */
 
+#include "config.h"
 #include "json.h"
-
-#include <sys/param.h>
 
 #include <stdio.h>
 #include <assert.h>
@@ -56,21 +55,21 @@
 #include <string.h>
 #include <ctype.h>
 
-#ifdef HAVE_STDINT_H
-# include <stdint.h>
-#else
+#if PLATFORM_LT(PLATFORM_BSD, PLATFORM_BSDOS)
 # include "posix/stdint.h"
+#else
+# include <stdint.h>
 #endif
 
 #include "utils.h"
 
-#ifdef BSD
-extern         fprintf();
-extern char   *malloc();
-extern char   *realloc();
-extern char   *calloc();
-extern         free();
+#if PLATFORM_LT(PLATFORM_BSD, PLATFORM_BSDOS)
+extern char   *strdup();
+# if PLATFORM_LT(PLATFORM_BSD, PLATFORM_ULTRIX)
 extern double  strtod();
+extern int     fprintf();
+extern int     free();
+# endif
 #endif
 
 #ifndef EXIT_FAILURE

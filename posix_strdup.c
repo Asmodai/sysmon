@@ -45,15 +45,22 @@
  * @brief `strdup' for platforms that lack it.
  */
 
-#include <sys/param.h>
+#include "config.h"
+
 #include <sys/types.h>
 
 #include <stdlib.h>
 #include <string.h>
 
-#ifdef BSD
+#if PLATFORM_EQ(PLATFORM_BSD)
+# if PLATFORM_LT(PLATFORM_BSD, PLATFORM_BSDOS)
+#  if PLATFORM_GTE(PLATFORM_BSD, PLATFORM_ULTRIX)
+extern void *malloc(size_t);
+#  else
 extern char *malloc();
 extern char *memcpy();
+#  endif  /* BSD > ULTRIX */
+# endif  /* BSD < BSDOS */
 #endif
 
 char *
