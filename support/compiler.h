@@ -48,7 +48,7 @@
 #ifndef _compiler_h_
 #define _compiler_h_
 
-#define COMPILER_GCC        0x01000000  /* GNU C++ (g++) compiler.          */
+#define COMPILER_GCC        0x01000000  /* GNU compiler.                    */
 #define COMPILER_GCC27      0x01000001  /* GCC 2.7.x.                       */
 #define COMPILER_GCC30      0x01000002  /* GCC 3.0.x.                       */
 #define COMPILER_UNKNOWN    0x80000000  /* Unknown or unsupported compiler. */
@@ -58,14 +58,18 @@
 # if (__GNUC__ == 2) && (__GNUC_MINOR__ < 7)
 #  error "This compiler is too old!"
 # elif (__GNUC__ == 2) && (__GNUC_MINOR__ == 7)
-#  define COMPILER COMPILER_GCC27
+#  define COMPILER      COMPILER_GCC27
+#  define COMPILER_NAME "GCC 2.7.x"
 # elif (__GNUC__ == 3) && (__GNUC_MINOR__ == 0)
-#  define COMPILER COMPILER_GCC30
+#  define COMPILER      COMPILER_GCC30
+#  define COMPILER_NAME "GCC 3.0.x"
 # else
-#  define COMPILER COMPILER_GCC
+#  define COMPILER      COMPILER_GCC
+#  define COMPILER_NAME "GCC"
 # endif
 #elif
-# define COMPILER COMPILER_UNKNOWN
+# define COMPIULER_NAME "Unknown compiler"
+# define COMPILER       COMPILER_UNKNOWN
 #endif
 
 #define COMPILER_EQ(__c) \
