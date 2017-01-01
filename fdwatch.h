@@ -62,7 +62,7 @@ void  fdwatch_del_fd(int fd);
 int   fdwatch(long timeout_msecs);
 int   fdwatch_check_fd(int fd);
 void *fdwatch_get_next_client_data(void);
-int   fdwatch_logstats(long secs);
+void  fdwatch_logstats(long secs);
 
 #endif /* !_fdwatch_h_ */
 
