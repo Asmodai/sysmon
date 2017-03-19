@@ -46,7 +46,8 @@
  * @brief Timers implementation.
  */
 
-#include <sys/param.h>
+#include "config.h"
+
 #include <sys/types.h>
 #include <sys/time.h>
 
@@ -57,10 +58,17 @@
 #include "timers.h"
 #include "utils.h"
 
-#ifdef BSD
-extern gettimeofday();
-extern free();
-extern syslog();
+#if PLATFORM_EQ(PLATFORM_BSD)
+# if PLATFORM_LT(PLATFORM_BSD, PLATFORM_BSDOS)
+#  if PLATFORM_GTE(PLATFORM_BSD, PLATFORM_ULTRIX)
+extern int  gettimeofday(struct timeval *, struct timezone *);
+extern void syslog(int, char *, ...);
+#  else
+extern int  gettimeofday();
+extern int  syslog();
+extern int  free();
+#  endif  /* BSD > ULTRIX */
+# endif  /* BSD < BSDOS */
 #endif
 
 #define HASH_SIZE 67

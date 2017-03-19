@@ -1,11 +1,11 @@
 /*
- * endpoint.c --- Endpoints implementation.
+ * httpd.h --- HTTP server
  *
- * Copyright (c) 2016 Paul Ward <asmodai@gmail.com>
+ * Copyright (c) 2017 Paul Ward <asmodai@gmail.com>
  *
  * Author:     Paul Ward <asmodai@gmail.com>
  * Maintainer: Paul Ward <asmodai@gmail.com>
- * Created:    29 Dec 2016 23:24:18
+ * Created:    19 Mar 2017 07:38:56
  */
 /* {{{ License: */
 /*
@@ -40,87 +40,26 @@
 /* }}} */
 
 /**
- * @file endpoint.c
+ * @file httpd.h
  * @author Paul Ward
- * @brief Endpoints implementation.
+ * @brief HTTP server
  */
 
-#include "config.h"
+#ifndef _http_h_
+#define _http_h_
 
-#include <sys/param.h>
-#include <sys/types.h>
+#define HTTP_PORT  1337
 
-#include <stdlib.h>
-#include <stdio.h>
-#include <string.h>
-#include <syslog.h>
+#define HTTP_ERROR     42
+#define HTTP_LOG       44
+#define HTTP_FORBIDDEN 403
+#define HTTP_NOTFOUND  404
+#define HTTP_INTERNAL  500
 
-#include "utils.h"
-#include "endpoints.h"
+void http_logger(int, char *, char *, int);
+void http_server(int, int);
+void http_spawn(void);
 
-#if PLATFORM_EQ(PLATFORM_BSD)
-# if PLATFORM_LT(PLATFORM_BSD, PLATFORM_BSDOS)
-extern char *strdup(const char *);
-# endif
-#endif
+#endif  /* !_httpd_h_ */
 
-endpoint_t *endpoints = NULL;
-
-void
-endpoint_init(void)
-{
-  endpoints = NULL;
-}
-
-endpoint_t *
-endpoint_create(const char *name, const void *instance)
-{
-  endpoint_t *node = xmalloc(sizeof(endpoint_t));
-
-  node->hash     = pjw_hash(name);
-  node->name     = strdup(name);
-  node->instance = instance;
-  node->next     = NULL;
-  node->prev     = NULL;
-
-  if (endpoints == NULL) {
-    endpoints = node;
-    goto out;
-  }
-
-  endpoints->prev = node;
-  node->next      = endpoints;
-  endpoints       = node;
-
-out:
-  return node;
-}
-
-endpoint_t *
-endpoint_find(const char *name)
-{
-  unsigned long  hash = pjw_hash(name);
-  endpoint_t    *node = endpoints;
-
-  while (node != NULL) {
-    if (node->hash == hash) {
-      return node;
-    }
-
-    node = node->next;
-  }
-
-  return NULL;
-}
-
-void
-endpoint_traverse(void (*callback)(const void *))
-{
-  endpoint_t *node = endpoints;
-
-  for (; node != NULL; node = node->next) {
-    (callback)(node->instance);
-  }
-}
-
-/* endpoint.c ends here. */
+/* httpd.h ends here. */

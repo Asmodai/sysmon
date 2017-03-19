@@ -1,11 +1,11 @@
 /*
- * endpoint.c --- Endpoints implementation.
+ * xopen.h --- X/Open standard detection.
  *
- * Copyright (c) 2016 Paul Ward <asmodai@gmail.com>
+ * Copyright (c) 2017 Paul Ward <asmodai@gmail.com>
  *
  * Author:     Paul Ward <asmodai@gmail.com>
  * Maintainer: Paul Ward <asmodai@gmail.com>
- * Created:    29 Dec 2016 23:24:18
+ * Created:    10 Mar 2017 17:21:43
  */
 /* {{{ License: */
 /*
@@ -40,87 +40,56 @@
 /* }}} */
 
 /**
- * @file endpoint.c
+ * @file xopen.h
  * @author Paul Ward
- * @brief Endpoints implementation.
+ * @brief X/Open standard detection.
  */
 
-#include "config.h"
+#ifndef _xopen_h_
+#define _xopen_h_
 
-#include <sys/param.h>
-#include <sys/types.h>
+#include <unistd.h>
 
-#include <stdlib.h>
-#include <stdio.h>
-#include <string.h>
-#include <syslog.h>
+/*
+ * X/Open standards.
+ */
+#define XOPEN_NONE    0x00              /* No X/Open standard.         */
+#define XOPEN_XPG3    0x01              /* X/Open Portability Guide 3. */
+#define XOPEN_XPG4    0x02              /* X/Open Portability Guide 4. */
+#define XOPEN_UNIX95  0x04              /* X/Open Single UNIX Spec.    */
+#define XOPEN_UNIX98  0x08              /* X/Open Single UNIX Spec v2. */
+#define XOPEN_UNIX03  0x10              /* X/Open Single UNIX Spec v3. */
+#define XOPEN_SUS4    0x20              /* X/Open Single UNIX Spec v4. */
 
-#include "utils.h"
-#include "endpoints.h"
-
-#if PLATFORM_EQ(PLATFORM_BSD)
-# if PLATFORM_LT(PLATFORM_BSD, PLATFORM_BSDOS)
-extern char *strdup(const char *);
+#if defined(_XOPEN_VERSION)
+# if (_XOPEN_VERSION == 3)
+#  define XOPEN_STANDARD    XOPEN_XPG3
+# elif (_XOPEN_VERSION == 4)
+#  if defined(_XOPEN_UNIX)
+#   define XOPEN_STANDARD   XOPEN_UNIX95
+#  else
+#   define XOPEN_STANDARD   XOPEN_XPG4
+#  endif
+# elif (_XOPEN_VERSION == 500)
+#  define XOPEN_STANDARD    XOPEN_UNIX98
+# elif (_XOPEN_VERSION == 600)
+#  define XOPEN_STANDARD    XOPEN_UNIX03
+# elif (_XOPEN_VERSION == 700)
+#  define XOPEN_STANDARD    XOPEN_SUS4
 # endif
+#else
+# define XOPEN_STANDARD     XOPEN_NONE
 #endif
 
-endpoint_t *endpoints = NULL;
+#define XOPEN_EQ(__s) \
+  (XOPEN_STANDARD == __s)
 
-void
-endpoint_init(void)
-{
-  endpoints = NULL;
-}
+#define XOPEN_GT(__s) \
+  (XOPEN_STANDARD >= __s)
 
-endpoint_t *
-endpoint_create(const char *name, const void *instance)
-{
-  endpoint_t *node = xmalloc(sizeof(endpoint_t));
+#define XOPEN_LT(__s) \
+  (XOPEN_STANDARD < __s)
 
-  node->hash     = pjw_hash(name);
-  node->name     = strdup(name);
-  node->instance = instance;
-  node->next     = NULL;
-  node->prev     = NULL;
+#endif /* !_xopen_h_ */
 
-  if (endpoints == NULL) {
-    endpoints = node;
-    goto out;
-  }
-
-  endpoints->prev = node;
-  node->next      = endpoints;
-  endpoints       = node;
-
-out:
-  return node;
-}
-
-endpoint_t *
-endpoint_find(const char *name)
-{
-  unsigned long  hash = pjw_hash(name);
-  endpoint_t    *node = endpoints;
-
-  while (node != NULL) {
-    if (node->hash == hash) {
-      return node;
-    }
-
-    node = node->next;
-  }
-
-  return NULL;
-}
-
-void
-endpoint_traverse(void (*callback)(const void *))
-{
-  endpoint_t *node = endpoints;
-
-  for (; node != NULL; node = node->next) {
-    (callback)(node->instance);
-  }
-}
-
-/* endpoint.c ends here. */
+/* xopen.h ends here. */

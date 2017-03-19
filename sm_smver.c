@@ -61,7 +61,7 @@ static sm_smver_t *smver_instance = NULL;
 static const char strMajor[] = "major";
 static const char strMinor[] = "minor";
 static const char strPatch[] = "patch";
-static const char strSmVer[] = "sm_smver";
+static const char strSmVer[] = "smver";
 
 void
 emit_smver(json_node_t **out)

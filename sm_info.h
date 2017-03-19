@@ -1,11 +1,11 @@
 /*
- * endpoint.c --- Endpoints implementation.
+ * sm_info.h --- Info structure.
  *
- * Copyright (c) 2016 Paul Ward <asmodai@gmail.com>
+ * Copyright (c) 2017 Paul Ward <asmodai@gmail.com>
  *
  * Author:     Paul Ward <asmodai@gmail.com>
  * Maintainer: Paul Ward <asmodai@gmail.com>
- * Created:    29 Dec 2016 23:24:18
+ * Created:    10 Mar 2017 21:08:16
  */
 /* {{{ License: */
 /*
@@ -40,87 +40,26 @@
 /* }}} */
 
 /**
- * @file endpoint.c
+ * @file sm_info.h
  * @author Paul Ward
- * @brief Endpoints implementation.
+ * @brief Info structure.
  */
 
-#include "config.h"
+#ifndef _sm_info_h_
+#define _sm_info_h_
 
-#include <sys/param.h>
-#include <sys/types.h>
+#include "vtable.h"
 
-#include <stdlib.h>
-#include <stdio.h>
-#include <string.h>
-#include <syslog.h>
+typedef struct {
+  sm_vtable_t *vtab;
 
-#include "utils.h"
-#include "endpoints.h"
+  /*
+   * Fields are computed once during startup.
+   */
+} sm_info_t;
 
-#if PLATFORM_EQ(PLATFORM_BSD)
-# if PLATFORM_LT(PLATFORM_BSD, PLATFORM_BSDOS)
-extern char *strdup(const char *);
-# endif
-#endif
+void sm_info_init(void);
 
-endpoint_t *endpoints = NULL;
+#endif /* !_sm_info_h_ */
 
-void
-endpoint_init(void)
-{
-  endpoints = NULL;
-}
-
-endpoint_t *
-endpoint_create(const char *name, const void *instance)
-{
-  endpoint_t *node = xmalloc(sizeof(endpoint_t));
-
-  node->hash     = pjw_hash(name);
-  node->name     = strdup(name);
-  node->instance = instance;
-  node->next     = NULL;
-  node->prev     = NULL;
-
-  if (endpoints == NULL) {
-    endpoints = node;
-    goto out;
-  }
-
-  endpoints->prev = node;
-  node->next      = endpoints;
-  endpoints       = node;
-
-out:
-  return node;
-}
-
-endpoint_t *
-endpoint_find(const char *name)
-{
-  unsigned long  hash = pjw_hash(name);
-  endpoint_t    *node = endpoints;
-
-  while (node != NULL) {
-    if (node->hash == hash) {
-      return node;
-    }
-
-    node = node->next;
-  }
-
-  return NULL;
-}
-
-void
-endpoint_traverse(void (*callback)(const void *))
-{
-  endpoint_t *node = endpoints;
-
-  for (; node != NULL; node = node->next) {
-    (callback)(node->instance);
-  }
-}
-
-/* endpoint.c ends here. */
+/* sm_info.h ends here. */

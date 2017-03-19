@@ -54,8 +54,8 @@
  * Virtual function table.
  */
 typedef struct {
-  int  (*get_data)(void *);             /* Method for retrieving OS data. */
-  void (*emit_json)(json_node_t **);    /* Method for emitting JSON data. */
+  int  (*get_data)(void *);
+  void (*emit_json)(json_node_t **);
 } sm_vtable_t;
 
 /*

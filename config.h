@@ -52,19 +52,28 @@
 #include <sys/param.h>
 
 /*
- * Define this if you have the stdint.h header file.
+ * Pull in compiler/platform/etc here.
  */
-#define HAVE_STDINT_H
+#include "support/compiler.h"
+#include "support/platform.h"
+#include "support/machine.h"
+#include "support/posix.h"
+#include "support/xopen.h"
+#include "support/support.h"
 
-/*
- * Define this if you have the stdbool.h header file.
- */
-#define HAVE_STDBOOL_H
+#if COMPILER_GT(COMPILER_GCC, COMPILER_GCC30)
+# define HAVE_STDINT_H
+# define HAVE_STDBOOL_H
+#else
+# undef HAVE_STDINT_H
+# undef HAVE_STDINT_H
+#endif
 
-/*
- * Define this if you have the sys/utsname.h header file.
- */
-#define HAVE_SYS_UTSNAME_H
+#if PLATFORM_LT(PLATFORM_BSD, PLATFORM_ULTRIX)
+# undef HAVE_SYS_UTSNAME_H
+#else
+# define HAVE_SYS_UTSNAME_H
+#endif
 
 /*
  * Default port on which we listen.

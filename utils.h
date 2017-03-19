@@ -50,6 +50,14 @@
 
 #include <sys/types.h>
 
+#ifndef MAX
+# define MAX(__a, __b)     ((__a) > (__b) ? (__a) : (__b))
+#endif
+
+#ifndef MIN
+# define MIN(__a, __b)     ((__a) < (__b) ? (__a) : (__b))
+#endif
+
 void          *xmalloc(size_t);
 void          *xrealloc(void *, size_t);
 void          *xcalloc(size_t, size_t);

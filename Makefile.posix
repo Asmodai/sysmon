@@ -3,9 +3,9 @@ CC=gcc
 CFLAGS=-Wall -pedantic -g -DDEBUG
 
 SRCS=		utils.c json.c sm_smver.c sm_uname.c sm_all.c endpoints.c \
-		timers.c main.c
+		sm_info.c fdwatch.c timers.c httpd.c main.c
 OBJS=		utils.o json.o sm_smver.o sm_uname.o sm_all.o endpoints.o \
-		timers.o main.o
+		sm_info.o fdwatch.o timers.o httpd.o main.o
 BIN=		sysmon
 
 .c.o:

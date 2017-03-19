@@ -48,6 +48,8 @@
 #ifndef _stdint_h_
 #define _stdint_h_
 
+#include "../config.h"
+
 /* Exact types. */
 typedef signed char            int8_t;
 typedef unsigned char          uint8_t;
@@ -55,7 +57,6 @@ typedef short int              int16_t;
 typedef unsigned short int     uint16_t;
 typedef int                    int32_t;
 typedef unsigned int           uint32_t;
-#ifndef NO_64_BIT
 # if __WORDSIZE == 64
 typedef long int               int64_t;
 typedef unsigned long int      uint64_t;
@@ -63,7 +64,6 @@ typedef unsigned long int      uint64_t;
 typedef long long int          int64_t;
 typedef unsigned long long int uint64_t;
 # endif
-#endif
 
 /* Small types. */
 typedef signed char            int_least8_t;
@@ -73,7 +73,6 @@ typedef unsigned short int     uint_least16_t;
 typedef int                    int_least32_t;
 typedef unsigned int           uint_least32_t;
 
-#ifndef NO_64_BIT
 # if __WORDSIZE == 64
 typedef long int               int_least64_t;
 typedef unsigned long int      uint_least64_t;
@@ -81,7 +80,6 @@ typedef unsigned long int      uint_least64_t;
 typedef long long int          int_least64_t;
 typedef unsigned long long int uint_least64_t;
 # endif
-#endif
 
 /* Fast types. */
 typedef signed char            int_fast8_t;
@@ -91,19 +89,15 @@ typedef long int               int_fast16_t;
 typedef unsigned long int      uint_fast16_t;
 typedef long int               int_fast32_t;
 typedef unsigned long int      uint_fast32_t;
-# ifndef NO_64_BIT
 typedef long int               int_fast64_t;
 typedef unsigned long int      uint_fast64_t;
-# endif
 #else
 typedef int                    int_fast16_t;
 typedef unsigned int           uint_fast16_t;
 typedef int                    int_fast32_t;
 typedef unsigned int           uint_fast32_t;
-# ifndef NO_64_BIT
 typedef long long int          int_fast64_t;
 typedef unsigned long long int uint_fast64_t;
-# endif
 #endif
 
 /* Pointer types. */

@@ -45,15 +45,25 @@
  * @brief Various utilities.
  */
 
-#include <sys/param.h>
+#include "config.h"
+
 #include <sys/types.h>
 
 #include <stdlib.h>
 #include <stdio.h>
 
-#ifdef BSD
-extern       perror();
+#if PLATFORM_LT(PLATFORM_BSD, PLATFORM_HPUX9)
+extern void  perror();
+
+# if PLATFORM_EQ(PLATFORM_ULTRIX)
+extern void *malloc(size_t);
+extern void *realloc(void *, size_t);
+extern void *calloc(size_t, size_t);
+# else
 extern char *malloc();
+extern char *realloc();
+extern char *calloc();
+# endif
 #endif
 
 void *

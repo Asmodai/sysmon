@@ -57,9 +57,13 @@
 #include "json.h"
 #include "endpoints.h"
 #include "timers.h"
+#include "httpd.h"
+
 #include "sm_uname.h"
 #include "sm_smver.h"
+#include "sm_info.h"
 #include "sm_all.h"
+
 
 bool Pretty_Output;
 
@@ -75,17 +79,22 @@ main(void)
 
   sm_uname_init();
   sm_smver_init();
+  sm_info_init();
   sm_all_init();
 
   node = endpoint_find("all");
   if (node != NULL) {
-    sm_uname_t *inst = (sm_uname_t *)node->instance;
-    json_node_t *obj = json_mkobject();
+    sm_uname_t  *inst = (sm_uname_t *)node->instance;
+    json_node_t *obj  = json_mkobject();
 
     (inst->vtab->emit_json)(&obj);
 
     printf("%s\n", json_stringify(obj, NULL));
+
+    free(obj);
   }
+
+  http_spawn();
 
   return 0;
 }
