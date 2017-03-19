@@ -61,6 +61,7 @@
 
 /* Detect compiler */
 #if defined(__GNUC__)
+# define COMPILER_NAME "GNU Compiler Collection"
 # if (__GNUC__ == 2) && (__GNUC_MINOR__ < 7)
 #  error "This compiler is too old!"
 # elif (__GNUC__ == 2)

@@ -56,20 +56,56 @@
 #include "version.h"
 #include "utils.h"
 
+#include "support/compiler.h"
 #include "support/posix.h"
 #include "support/xopen.h"
 
 static endpoint_t *info_endpoint = NULL;
 static sm_info_t  *info_instance = NULL;
 
-static const char strPosix[]  = "standardPOSIX";
-static const char strXopen[]  = "standardXOpen";
-static const char strSmInfo[] = "info";
+static const char strPosix[]    = "standardPOSIX";
+static const char strXopen[]    = "standardXOpen";
+static const char strCompiler[] = "build_compiler";
+static const char strStdC[]     = "standardC";
+static const char strSmInfo[]   = "info";
 
 static char *posix_info = NULL;
 static char *xopen_info = NULL;
+static char *stdc_info  = NULL;
 
 const size_t info_size = 128;
+
+static
+void
+make_c_standard_info(void)
+{
+  if (stdc_info == NULL) {
+    stdc_info = xmalloc(sizeof *stdc_info * info_size);
+    bzero(stdc_info, sizeof *stdc_info * info_size);
+
+    switch (C_STANDARD) {
+      case STANDARD_C89:
+        sprintf(stdc_info, "ANSI X3.159-1989 (C89)");
+        break;
+
+      case STANDARD_C90:
+        sprintf(stdc_info, "ISO/IEC 9899:1990 (C90)");
+        break;
+
+      case STANDARD_C99:
+        sprintf(stdc_info, "ISO/IEC 9899:1999 (C99)");
+        break;
+        
+      case STANDARD_C11:
+        sprintf(stdc_info, "ISO/IEC 9899:2011 (C11)");
+        break;
+
+      default:
+        sprintf(stdc_info, "Not an ANSI C compiler");
+        break;
+    }
+  }
+}
 
 static
 void
@@ -158,8 +194,10 @@ emit_info(json_node_t **out)
 {
   json_node_t *ret = out ? json_mkobject() : NULL;
 
-  json_prepend_member(ret, strPosix, json_mkstring(posix_info));
-  json_prepend_member(ret, strXopen, json_mkstring(xopen_info));
+  json_prepend_member(ret, strPosix,     json_mkstring(posix_info));
+  json_prepend_member(ret, strXopen,     json_mkstring(xopen_info));
+  json_prepend_member(ret, strStdC,     json_mkstring(stdc_info));
+  json_prepend_member(ret, strCompiler,  json_mkstring(COMPILER_NAME));
 
   if (out) {
     *out = ret;
@@ -171,6 +209,7 @@ sm_info_init(void)
 {
   make_posix_info();
   make_xopen_info();
+  make_c_standard_info();
 
   if (info_instance == NULL) {
     info_instance       = xmalloc(sizeof(sm_info_t));

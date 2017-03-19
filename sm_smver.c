@@ -70,12 +70,9 @@ emit_smver(json_node_t **out)
 {
   json_node_t *ret = out ? json_mkobject() : NULL;
 
-  json_prepend_member(ret, "major",          json_mknumber(VERSION_MAJOR));
-  json_prepend_member(ret, "minor",          json_mknumber(VERSION_MINOR));
-  json_prepend_member(ret, "patch",          json_mknumber(VERSION_PATCH));
-  json_prepend_member(ret, "build_platform", json_mkstring(PLATFORM_NAME));
-  json_prepend_member(ret, "build_compiler", json_mkstring(COMPILER_NAME));
-  json_prepend_member(ret, "build_arch",     json_mkstring(ARCHITECTURE_NAME));
+  json_prepend_member(ret, strMajor,      json_mknumber(VERSION_MAJOR));
+  json_prepend_member(ret, strMinor,      json_mknumber(VERSION_MINOR));
+  json_prepend_member(ret, strPatch,      json_mknumber(VERSION_PATCH));
 
   if (out) {
     *out = ret;

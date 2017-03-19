@@ -140,14 +140,13 @@ http_logger(int type, char *title, char *message, int sockfd)
 void
 http_server(int fd, int hit)
 {
-  long   ret                      = 0;
-  size_t buflen                   = 0;
-  size_t i                        = 0;
-  size_t      j         = 0;
-  endpoint_t  *node = NULL;
-  json_node_t *obj = NULL;
-  sm_all_t *inst = NULL;
-  char     *json     = NULL;
+  long         ret                = 0;
+  size_t       i                  = 0;
+  size_t       j                  = 0;
+  endpoint_t  *node               = NULL;
+  json_node_t *obj                = NULL;
+  sm_all_t    *inst               = NULL;
+  char        *json               = NULL;
   static char buffer[BUFSIZE + 1] = { 0 };
 
   ret = read(fd, buffer, BUFSIZE);
@@ -191,7 +190,7 @@ http_server(int fd, int hit)
   }
 
   inst = (sm_all_t *)node->instance;
-  obj = json_mkobject();
+  obj  = json_mkobject();
 
   (inst->vtab->emit_json)(&obj);
   json = json_stringify(obj, NULL);
@@ -206,6 +205,7 @@ http_server(int fd, int hit)
   write(fd, json, strlen(json));
   write(fd, "\n", 1);
   free(json);
+  json_delete(obj);
 
   sleep(1);
   close(fd);
