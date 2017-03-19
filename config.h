@@ -76,6 +76,7 @@
 #endif
 
 /*
+=======
  * Default port on which we listen.
  */
 #define DEFAULT_PORT 7070
@@ -162,6 +163,15 @@
  * This is black magic.
  */
 #define MIN_WOULDBLOCK_DELAY 100L
+
+/*
+ * Pull in compiler/platform/etc here.
+ */
+#include "support/compiler.h"
+#include "support/platform.h"
+#include "support/machine.h"
+#include "support/support.h"
+#include "support/features.h"
 
 #endif  /* !_CONFIG_H_ */
 

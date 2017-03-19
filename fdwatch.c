@@ -2,6 +2,7 @@
  * fdwatch.c --- File descriptor watching.
  *
  * Copyright (c) 2017 Paul Ward <asmodai@gmail.com>
+ * Copyright (c) 1999 Jef Poskanzer <jef@mail.acme.com>
  *
  * Author:     Paul Ward <asmodai@gmail.com>
  * Maintainer: Paul Ward <asmodai@gmail.com>
@@ -100,6 +101,8 @@
 extern int  getdtablesize();
 #  if PLATFORM_GTE(PLATFORM_BSD, PLATFORM_ULTRIX)
 extern void syslog(int, char *, ...);
+extern int  select();
+extern void bzero();
 #  else
 extern int  syslog();
 extern int  bzero();

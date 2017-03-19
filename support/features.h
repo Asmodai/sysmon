@@ -1,11 +1,11 @@
 /*
- * sm_all.c --- Iterate all the things.
+ * features.h --- Platform features.
  *
- * Copyright (c) 2016 Paul Ward <asmodai@gmail.com>
+ * Copyright (c) 2017 Paul Ward <asmodai@gmail.com>
  *
  * Author:     Paul Ward <asmodai@gmail.com>
  * Maintainer: Paul Ward <asmodai@gmail.com>
- * Created:    30 Dec 2016 02:32:58
+ * Created:    01 Jan 2017 08:15:16
  */
 /* {{{ License: */
 /*
@@ -40,70 +40,44 @@
 /* }}} */
 
 /**
- * @file sm_all.c
+ * @file features.h
  * @author Paul Ward
- * @brief Iterate all the things.
+ * @brief Platform features.
  */
 
-#include <stdlib.h>
-#include <stdio.h>
+#ifndef _features_h_
+#define _features_h_
 
-#include "json.h"
-#include "vtable.h"
-#include "sm_all.h"
-#include "endpoints.h"
-#include "version.h"
-#include "utils.h"
+#include "platform.h"
 
-static endpoint_t *all_endpoint = NULL;
-static sm_all_t   *all_instance = NULL;
+/*
+ * The following systems do not have a `uname` syscall:
+ *
+ *   o 4.2 BSD,
+ *   o 4.3 BSD,
+ *   o NeXTSTEP,
+ *   o OPENSTEP,
+ *   o Rhapsody
+ */
+#if PLATFORM_LT(PLATFORM_BSD, PLATFORM_44BSD) || \
+  PLATFORM_LT(PLATFORM_NEXT, PLATFORM_MACOSX)
+# undef HAVE_SYS_UTSNAME_H
+#else
+# define HAVE_SYS_UTSNAME_H
+#endif
 
-void
-emit_all(json_node_t **out)
-{
-  json_node_t       *ret  = out ? json_mkobject() : NULL;
-  endpoint_t        *node = NULL;
-  extern endpoint_t *endpoints;
+/*
+ * Lots of older systems lack stdint.h and stdbool.h
+ */
+#if PLATFORM_EQ(PLATFORM_LINUX) || \
+  PLATFORM_GTE(PLATFORM_BSD, PLATFORM_FREEBSD) || \
+  PLATFORM_GTE(PLATFORM_NEXT, PLATFORM_OSX) || \
+  PLATFORM_GTE(PLATFORM_SVR4, PLATFORM_SOLARIS) || \
+  PLATFORM_GTE(PLATFORM_SVR3, PLATFORM_AIX)
+# define HAVE_STDINT_H
+# define HAVE_STDBOOL_H
+#endif
 
-  endpoint_foreach(node) {
-    json_node_t *obj  = NULL;
-    sm_base_t   *inst = NULL;
+#endif /* !_features_h_ */
 
-    /* Infinite loops are bad. */
-    if (node->hash == all_endpoint->hash) {
-      continue;
-    }
-
-    if (node != NULL) {
-      inst = (sm_base_t *)node->instance;
-
-      (inst->vtab->emit_json)(&obj);
-
-      if (obj != NULL) {
-        json_append_member(ret, node->name, obj);
-      }
-    }
-  }
-
-  if (out) {
-    *out = ret;
-  }
-}
-
-void
-sm_all_init(void)
-{
-  if (all_instance == NULL) {
-    all_instance       = xmalloc(sizeof(sm_all_t));
-    all_instance->vtab = xmalloc(sizeof(sm_vtable_t));
-
-    all_instance->vtab->get_data  = NULL;
-    all_instance->vtab->emit_json = &emit_all;
-  }
-
-  if (all_endpoint == NULL) {
-    all_endpoint = endpoint_create("all", all_instance);
-  }
-}
-
-/* sm_all.c ends here. */
+/* features.h ends here. */
