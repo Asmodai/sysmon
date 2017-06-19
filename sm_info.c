@@ -127,6 +127,7 @@ make_posix_info(void)
       case POSIX_2:
         sprintf(posix_info, "ISO/IEC 9945-2:1993");
         break;
+
       case POSIX_1B_1993:
         sprintf(posix_info, "IEEE 1003.1b-1993");
         break;
@@ -194,10 +195,10 @@ emit_info(json_node_t **out)
 {
   json_node_t *ret = out ? json_mkobject() : NULL;
 
-  json_prepend_member(ret, strPosix,     json_mkstring(posix_info));
-  json_prepend_member(ret, strXopen,     json_mkstring(xopen_info));
+  json_prepend_member(ret, strPosix,    json_mkstring(posix_info));
+  json_prepend_member(ret, strXopen,    json_mkstring(xopen_info));
   json_prepend_member(ret, strStdC,     json_mkstring(stdc_info));
-  json_prepend_member(ret, strCompiler,  json_mkstring(COMPILER_NAME));
+  json_prepend_member(ret, strCompiler, json_mkstring(COMPILER_NAME));
 
   if (out) {
     *out = ret;

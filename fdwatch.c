@@ -52,7 +52,7 @@
 #include <sys/time.h>
 
 #if !PLATFORM_LT(PLATFORM_BSD, PLATFORM_44BSD)
-#include <sys/resource.h>
+# include <sys/resource.h>
 #endif
 
 #include <stdlib.h>

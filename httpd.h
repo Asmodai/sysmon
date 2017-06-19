@@ -48,8 +48,6 @@
 #ifndef _http_h_
 #define _http_h_
 
-#define HTTP_PORT  1337
-
 #define HTTP_ERROR     42
 #define HTTP_LOG       44
 #define HTTP_FORBIDDEN 403
@@ -57,7 +55,7 @@
 #define HTTP_INTERNAL  500
 
 void http_logger(int, char *, char *, int);
-void http_server(int, int);
+void http_server(int);
 void http_spawn(void);
 
 #endif  /* !_httpd_h_ */

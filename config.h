@@ -76,10 +76,9 @@
 #endif
 
 /*
-=======
- * Default port on which we listen.
+ * Default port on which the httpd listens.
  */
-#define DEFAULT_PORT 7070
+#define HTTPD_PORT 7070
 
 /*
  * How many seconds to allow for reading the initial request on a new
@@ -163,15 +162,6 @@
  * This is black magic.
  */
 #define MIN_WOULDBLOCK_DELAY 100L
-
-/*
- * Pull in compiler/platform/etc here.
- */
-#include "support/compiler.h"
-#include "support/platform.h"
-#include "support/machine.h"
-#include "support/support.h"
-#include "support/features.h"
 
 #endif  /* !_CONFIG_H_ */
 

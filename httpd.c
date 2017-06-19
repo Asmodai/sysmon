@@ -57,6 +57,7 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 
+#include "config.h"
 #include "httpd.h"
 #include "utils.h"
 #include "endpoints.h"
@@ -122,9 +123,12 @@ http_logger(int type, char *title, char *message, int sockfd)
       write(sockfd, internalmsg, strlen(internalmsg));
       sprintf(logbuffer, "INTERNAL SERVER ERROR: %s:%s", title, message);
       break;
-  }
 
-  // SYSLOG LOGGER HERE.
+    default:
+      write(sockfd, internalmsg, strlen(internalmsg));
+      sprintf(logbuffer, "UNKNOWN: %d:%s:%s", type, title, message);
+      break;
+  }
 
   if ((fd = open("http.log", O_CREAT | O_WRONLY | O_APPEND,  0644)) >= 0) {
     write(fd, logbuffer, strlen(logbuffer));
@@ -138,7 +142,7 @@ http_logger(int type, char *title, char *message, int sockfd)
 }
 
 void
-http_server(int fd, int hit)
+http_server(int fd)
 {
   long         ret                = 0;
   size_t       i                  = 0;
@@ -180,13 +184,13 @@ http_server(int fd, int hit)
 
   for (j = 0; i < i - 1; j++) {
     if (buffer[j] == '.' && buffer[j + 1] == '.') {
-      http_logger(HTTP_FORBIDDEN, "Path name .. not supported.", buffer, fd);
+      http_logger(HTTP_FORBIDDEN, "Path '..' not supported.", buffer, fd);
     }
   }
 
   node = endpoint_find(&buffer[5]);
   if (node == NULL) {
-    http_logger(HTTP_NOTFOUND, "Nope.", &buffer[5], fd);
+    http_logger(HTTP_NOTFOUND, "Endpoint not found", &buffer[5], fd);
   }
 
   inst = (sm_all_t *)node->instance;
@@ -194,6 +198,10 @@ http_server(int fd, int hit)
 
   (inst->vtab->emit_json)(&obj);
   json = json_stringify(obj, NULL);
+
+  if (json == NULL) {
+    http_logger(HTTP_INTERNAL, "JSON string not generated", &buffer[5], fd);
+  }
 
   sprintf(buffer,
           "HTTP/1.0 200 OK\n"
@@ -204,6 +212,7 @@ http_server(int fd, int hit)
   write(fd, buffer, strlen(buffer));
   write(fd, json, strlen(json));
   write(fd, "\n", 1);
+
   free(json);
   json_delete(obj);
 
@@ -222,7 +231,8 @@ http_spawn(void)
   pid_t                     pid      = 0;
   static struct sockaddr_in cli_addr;
   static struct sockaddr_in srv_addr;
-  /*
+
+  /* TODO: make this an option.
   if (fork() != 0) {
     return;
   }
@@ -240,7 +250,7 @@ http_spawn(void)
 
   srv_addr.sin_family      = AF_INET;
   srv_addr.sin_addr.s_addr = htonl(INADDR_ANY);
-  srv_addr.sin_port        = htons(HTTP_PORT);
+  srv_addr.sin_port        = htons(HTTPD_PORT);
 
   if (bind(listenfd, (struct sockaddr *)&srv_addr, sizeof(srv_addr)) < 0) {
     http_logger(HTTP_ERROR, "system call", "bind", 0);
@@ -263,7 +273,7 @@ http_spawn(void)
     } else {
       if (pid == 0) {
         close(listenfd);
-        http_server(sockfd, hit);
+        http_server(sockfd);
       } else {
         close(sockfd);
       }
