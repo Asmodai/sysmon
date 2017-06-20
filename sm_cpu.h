@@ -1,11 +1,11 @@
 /*
- * utils.h --- Various utilities.
+ * sm_cpu.h --- CPU information.
  *
- * Copyright (c) 2016 Paul Ward <asmodai@gmail.com>
+ * Copyright (c) 2017 Paul Ward <asmodai@gmail.com>
  *
  * Author:     Paul Ward <asmodai@gmail.com>
  * Maintainer: Paul Ward <asmodai@gmail.com>
- * Created:    30 Dec 2016 01:02:56
+ * Created:    19 Jun 2017 04:43:05
  */
 /* {{{ License: */
 /*
@@ -40,30 +40,29 @@
 /* }}} */
 
 /**
- * @file utils.h
+ * @file sm_cpu.h
  * @author Paul Ward
- * @brief Various utilities.
+ * @brief CPU information.
  */
 
-#ifndef _utils_h_
-#define _utils_h_
+#ifndef _sm_cpu_h_
+#define _sm_cpu_h_
 
-#include <sys/types.h>
+#include "vtable.h"
 
-#ifndef MAX
-# define MAX(__a, __b)     ((__a) > (__b) ? (__a) : (__b))
-#endif
+typedef struct {
+  sm_vtable_t *vtab;
+  long         num_configured;          /* Number of CPUs in the machine. */
+  long         num_online;              /* Number of CPUs available. */
+  long         clock_speed;             /* Clock speed in MHz. */
+  size_t       word_size;               /* Native word size. */
+  char        *architecture;            /* CPU architecture. */
+  char        *model;                   /* CPU model. */
+  time_t       time;                    /* Update time. */
+} sm_cpu_t;
 
-#ifndef MIN
-# define MIN(__a, __b)     ((__a) < (__b) ? (__a) : (__b))
-#endif
+void sm_cpu_init(void);
 
-void          *xmalloc(size_t);
-void          *xrealloc(void *, size_t);
-void          *xcalloc(size_t, size_t);
-unsigned long  pjw_hash(const char *);
-void           strdecode(char *, const char *);
+#endif /* !_sm_cpu_h_ */
 
-#endif /* !_utils_h_ */
-
-/* utils.h ends here. */
+/* sm_cpu.h ends here. */

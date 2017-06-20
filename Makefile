@@ -60,6 +60,7 @@ POSIX_SRCS=posix_strtod.c \
 MODULE_SRCS=sm_smver.c \
 	    sm_uname.c \
 	    sm_info.c  \
+	    sm_cpu.c   \
 	    sm_all.c
 
 COMMON_OBJS=utils.o     \
@@ -78,6 +79,7 @@ POSIX_OBJS=posix_strtod.o \
 MODULE_OBJS=sm_smver.o \
 	    sm_uname.o \
 	    sm_info.o  \
+	    sm_cpu.o   \
 	    sm_all.o
 
 .c.o:

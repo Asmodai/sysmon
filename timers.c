@@ -160,7 +160,7 @@ l_resort(timer_task_t *t)
 }
 
 void
-timer_init(void)
+tmr_init(void)
 {
   int h = 0;
 
@@ -173,11 +173,11 @@ timer_init(void)
 }
 
 timer_task_t *
-timer_create(struct timeval     *now,
-             timer_proc_t       *timer_proc,
-             timer_clientdata_t  client_data,
-             long                msecs,
-             int                 periodic)
+tmr_create(struct timeval     *now,
+           timer_proc_t       *timer_proc,
+           timer_clientdata_t  client_data,
+           long                msecs,
+           int                 periodic)
 {
   timer_task_t *t = NULL;
 
@@ -218,12 +218,12 @@ timer_create(struct timeval     *now,
 }
 
 struct timeval *
-timer_task_timeout(struct timeval *now)
+tmr_task_timeout(struct timeval *now)
 {
   long                  msecs = 0;
   static struct timeval timeout;
 
-  msecs = timer_mstimeout(now);
+  msecs = tmr_mstimeout(now);
 
   if (msecs == INFTIM) {
     return NULL;
@@ -236,7 +236,7 @@ timer_task_timeout(struct timeval *now)
 }
 
 long
-timer_mstimeout(struct timeval *now)
+tmr_mstimeout(struct timeval *now)
 {
   int           h      = 0;
   int           gotone = 0;
@@ -272,7 +272,7 @@ timer_mstimeout(struct timeval *now)
 }
 
 void
-timer_run(struct timeval *now)
+tmr_run(struct timeval *now)
 {
   int           h    = 0;
   timer_task_t *t    = NULL;
@@ -303,14 +303,14 @@ timer_run(struct timeval *now)
 
         l_resort(t);
       } else {
-        timer_cancel(t);
+        tmr_cancel(t);
       }
     }
   }
 }
 
 void
-timer_reset(struct timeval *now, timer_task_t *t)
+tmr_reset(struct timeval *now, timer_task_t *t)
 {
   t->time          = *now;
   t->time.tv_sec  += t->msecs / 1000L;
@@ -325,7 +325,7 @@ timer_reset(struct timeval *now, timer_task_t *t)
 }
 
 void
-timer_cancel(timer_task_t *t)
+tmr_cancel(timer_task_t *t)
 {
   l_remove(t);
   timers_active_count--;
@@ -338,7 +338,7 @@ timer_cancel(timer_task_t *t)
 }
 
 void
-timer_cleanup(void)
+tmr_cleanup(void)
 {
   timer_task_t *t = NULL;
 
@@ -353,19 +353,19 @@ timer_cleanup(void)
 }
 
 void
-timer_task_term(void)
+tmr_task_term(void)
 {
   int h = 0;
 
   for (h = 0; h < HASH_SIZE; h++) {
-    timer_cancel(timers[h]);
+    tmr_cancel(timers[h]);
   }
 
-  timer_cleanup();
+  tmr_cleanup();
 }
 
 void
-timer_logstats(long secs)
+tmr_logstats(long secs)
 {
   syslog(LOG_NOTICE,
          "timers - %lu allocated, %lu active, %lu free",

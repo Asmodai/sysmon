@@ -48,15 +48,107 @@
 #ifndef _http_h_
 #define _http_h_
 
-#define HTTP_ERROR     42
-#define HTTP_LOG       44
-#define HTTP_FORBIDDEN 403
-#define HTTP_NOTFOUND  404
-#define HTTP_INTERNAL  500
+#include <sys/types.h>
+#include <sys/time.h>
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
 
-void http_logger(int, char *, char *, int);
-void http_server(int);
-void http_spawn(void);
+typedef union {
+  struct sockaddr    sa;
+  struct sockaddr_in sa_in;
+} sockaddr_t;
+
+typedef struct {
+  int listen_fd;
+  int max_age;
+} httpd_t;
+
+typedef struct {
+  int         one_one;                  /* HTTP 1.1 */
+  httpd_t    *server;
+  int         initialised;
+  int         conn_fd;
+  sockaddr_t  client_addr;
+  char       *read_buf;
+  size_t      read_size;
+  size_t      read_idx;
+  size_t      checked_idx;
+  int         checked_state;
+  off_t       bytes_to_send;
+  off_t       bytes_sent;
+  int         method;
+  int         status;
+  int         should_linger;
+  char       *encoded_url;
+  char       *decoded_url;
+  char       *protocol;
+  char       *path;
+  char       *reqhost;
+  char       *hdrhost;
+  char       *query;
+  char       *pathinfo;
+  char       *response;
+  char       *data_address;
+  int         mime_flag;
+  size_t      response_len;
+  size_t      max_query;
+  size_t      max_reqhost;
+  size_t      max_response;
+  size_t      max_decoded_url;
+  size_t      max_path;
+  size_t      max_pathinfo;
+} http_conn_t;
+
+#define HTTP_METHOD_UNKNOWN 0
+#define HTTP_METHOD_GET     1
+#define HTTP_METHOD_POST    2
+#define HTTP_METHOD_HEAD    3
+
+#define CHST_FIRSTWORD  0
+#define CHST_FIRSTWS    1
+#define CHST_SECONDWORD 2
+#define CHST_SECONDWS   3
+#define CHST_THIRDWORD  4
+#define CHST_THIRDWS    5
+#define CHST_LINE       6
+#define CHST_LF         7
+#define CHST_CR         8
+#define CHST_CRLF       9
+#define CHST_CRLFCR     10
+#define CHST_BOGUS      11
+
+#define GC_FAIL    0
+#define GC_OK      1
+#define GC_NO_MORE 2
+
+#define GR_NO_REQUEST  0
+#define GR_GOT_REQUEST 1
+#define GR_BAD_REQUEST 2
+
+extern char *ok200title;
+extern char *err400title;
+extern char *err400form;
+extern char *err404title;
+extern char *err404form;
+extern char *err500title;
+extern char *err500form;
+extern char *err501title;
+extern char *err501form;
+extern char *err503title;
+extern char *err505form;
+
+httpd_t *httpd_init(sockaddr_t *, int);
+void     httpd_set_ndelay(int);
+int      httpd_get_conn(httpd_t *, int, http_conn_t *);
+void     httpd_close_conn(http_conn_t *);
+size_t   httpd_write_fully(int, const char *, size_t);
+void     httpd_write_response(http_conn_t *);
+void     httpd_send_err(http_conn_t *, int, char *, char *, char *);
+void     httpd_realloc_str(char **, size_t *, size_t);
+int      httpd_got_request(http_conn_t *);
+char    *httpd_method_str(int);
+int      httpd_parse_request(http_conn_t *);
 
 #endif  /* !_httpd_h_ */
 

@@ -132,7 +132,7 @@
 /*
  * Time between updates of the throttle table's rolling averages.
  */
-#define THROTTLE_TIME 2
+#define THROTTLE_TIME 2000L
 
 /*
  * The listen() backlog queue length.  Be aware that the system's

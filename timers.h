@@ -76,20 +76,20 @@ typedef struct timer_task_task_s {
   int                       hash;
 } timer_task_t;
 
-void            timer_init(void);
-timer_task_t   *timer_create(struct timeval     *now,
-                             timer_proc_t       *timer_proc,
-                             timer_clientdata_t  client_data,
-                             long                msecs,
-                             int                 periodic);
-struct timeval *timer_task_timeout(struct timeval *now);
-long            timer_mstimeout(struct timeval *now);
-void            timer_run(struct timeval *now);
-void            timer_reset(struct timeval *now, timer_task_t *timer);
-void            timer_cancel(timer_task_t *timer);
-void            timer_cleanup(void);
-void            timer_task_term(void);
-void            timer_logstats(long secs);
+void            tmr_init(void);
+timer_task_t   *tmr_create(struct timeval     *now,
+                           timer_proc_t       *timer_proc,
+                           timer_clientdata_t  client_data,
+                           long                msecs,
+                           int                 periodic);
+struct timeval *tmr_task_timeout(struct timeval *now);
+long            tmr_mstimeout(struct timeval *now);
+void            tmr_run(struct timeval *now);
+void            tmr_reset(struct timeval *now, timer_task_t *timer);
+void            tmr_cancel(timer_task_t *timer);
+void            tmr_cleanup(void);
+void            tmr_task_term(void);
+void            tmr_logstats(long secs);
 
 #endif /* !_timers_h_ */
 

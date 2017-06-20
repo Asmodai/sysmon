@@ -262,7 +262,7 @@ fdwatch_add_fd(int fd, void *client_data, int rw)
 }
 
 void
-fdwwatch_del_fd(int fd)
+fdwatch_del_fd(int fd)
 {
   if (fd < 0 || fd >= nfiles || fd_rw[fd] == -1) {
     syslog(LOG_ERR, "bad fd (%d) passed to fdwatch_del_fd!", fd);
