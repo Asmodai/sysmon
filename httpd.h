@@ -131,6 +131,8 @@ extern char *err400title;
 extern char *err400form;
 extern char *err404title;
 extern char *err404form;
+extern char *err408title;
+extern char *err408form;
 extern char *err500title;
 extern char *err500form;
 extern char *err501title;
@@ -150,6 +152,7 @@ int      httpd_got_request(http_conn_t *);
 char    *httpd_method_str(int);
 int      httpd_start_request(http_conn_t *, struct timeval *);
 int      httpd_parse_request(http_conn_t *);
+char    *httpd_ntoa(sockaddr_t *);
 
 #endif  /* !_httpd_h_ */
 

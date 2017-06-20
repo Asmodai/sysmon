@@ -80,6 +80,8 @@ char *err400title = "Bad Request";
 char *err400form  = "Unable to satisfy your request.";
 char *err404title = "Not Found";
 char *err404form  = "The specified resource was not found.";
+char *err408title = "Request Timeout";
+char *err408form  = "No request appeared within a reasonable time period.";
 char *err500title = "Internal Server Error";
 char *err500form  = "The server encountered an error, check logs.";
 char *err501title = "Not Implemented";
@@ -230,7 +232,6 @@ sockaddr_len(sockaddr_t *addr)
   }
 }
 
-static
 char *
 httpd_ntoa(sockaddr_t *addr)
 {

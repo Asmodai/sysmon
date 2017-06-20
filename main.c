@@ -108,11 +108,47 @@ off_t  stats_bytes        = 0;
 long   stats_connections  = 0;
 int    stats_simultaneous = 0;
 
+static void finish_connection(connect_t *, struct timeval *);
+static void clear_connection(connect_t *, struct timeval *);
+
 static
 void
-idle(timer_clientdata_t data, struct timeval *now)
+idle(timer_clientdata_t data, struct timeval *tv)
 {
+  size_t     cnum = 0;
+  connect_t *conn;
+
+#ifdef DEBUG
   printf("TIMER FIRE - occasional\n");
+#endif
+
+  for (cnum = 0; cnum < max_connects; cnum++) {
+    conn = &connects[cnum];
+
+    switch (conn->state) {
+      case CNST_READING:
+        if (tv->tv_sec - conn->active >= IDLE_READ_TIMELIMIT) {
+          syslog(LOG_INFO, "%.80s connection timed out whist reading",
+                 httpd_ntoa(&conn->conn->client_addr));
+          httpd_send_err(conn->conn,
+                         408,
+                         err408title,
+                         "",
+                         err408form);
+          finish_connection(conn, tv);
+        }
+        break;
+
+      case CNST_SENDING:
+      case CNST_PAUSING:
+        if (tv->tv_sec - conn->active >= IDLE_SEND_TIMELIMIT) {
+          syslog(LOG_INFO, "%.80s connection timed out whilst sending",
+                 httpd_ntoa(&conn->conn->client_addr));
+          clear_connection(conn, tv);
+        }
+        break;
+    }
+  }
 }
 
 static
