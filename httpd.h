@@ -148,6 +148,7 @@ void     httpd_send_err(http_conn_t *, int, char *, char *, char *);
 void     httpd_realloc_str(char **, size_t *, size_t);
 int      httpd_got_request(http_conn_t *);
 char    *httpd_method_str(int);
+int      httpd_start_request(http_conn_t *, struct timeval *);
 int      httpd_parse_request(http_conn_t *);
 
 #endif  /* !_httpd_h_ */

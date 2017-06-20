@@ -283,9 +283,8 @@ static
 void
 handle_read(connect_t *conn, struct timeval *tv)
 {
-  int                 sz    = -1;
-  timer_clientdata_t  data;
-  http_conn_t        *hconn = conn->conn;
+  int          sz    = -1;
+  http_conn_t *hconn = conn->conn;
 
   if (hconn->read_idx >= hconn->read_size) {
     if (hconn->read_size > 5000) {
@@ -374,8 +373,7 @@ handle_read(connect_t *conn, struct timeval *tv)
   conn->state            = CNST_SENDING;
   conn->started          = tv->tv_sec;
   conn->wouldblock_delay = 0;
-  data.p                 = conn;
-
+  
   fdwatch_del_fd(hconn->conn_fd);
   fdwatch_add_fd(hconn->conn_fd, conn, FDW_WRITE);
 }
@@ -386,10 +384,8 @@ handle_send(connect_t *conn, struct timeval *tv)
 {
   ssize_t             max_bytes = 100000L;
   ssize_t             sz        = 0;
-  size_t              coast     = 0;
   timer_clientdata_t  cd        = JunkClientData;
-  time_t              elapsed   = 0;
-  http_conn_t *hconn = conn->conn;
+  http_conn_t        *hconn     = conn->conn;
   
   if (hconn->response_len == 0) {
     printf("WRITE - Sending [%s]\n", hconn->data_address);
@@ -403,11 +399,11 @@ handle_send(connect_t *conn, struct timeval *tv)
     printf("WRITEV - Sending [%s]\n", hconn->data_address);
 
     iv[0].iov_base = hconn->response;
-    iv[0].iov_len = hconn->response_len;
+    iv[0].iov_len  = hconn->response_len;
     iv[1].iov_base = &(hconn->data_address[conn->next_byte_idx]);
     iv[1].iov_len  = MIN(conn->end_byte_idx - conn->next_byte_idx, max_bytes);
 
-    sz             = writev(hconn->conn_fd, iv, 2);
+    sz = writev(hconn->conn_fd, iv, 2);
   }
 
   if (sz < 0 && errno == EINTR) {
@@ -415,7 +411,7 @@ handle_send(connect_t *conn, struct timeval *tv)
   }
 
   if (sz == 0 ||
-      (sz < 0 && (errno = EWOULDBLOCK || errno == EAGAIN)))
+      (sz < 0 && (errno  = EWOULDBLOCK || errno == EAGAIN)))
   {
     conn->wouldblock_delay += MIN_WOULDBLOCK_DELAY;
     conn->state             = CNST_PAUSING;
@@ -465,7 +461,7 @@ handle_send(connect_t *conn, struct timeval *tv)
     }
   }
 
-  conn->next_byte_idx     += sz;
+  conn->next_byte_idx    += sz;
   conn->conn->bytes_sent += sz;
 
   if (conn->next_byte_idx >= conn->end_byte_idx) {
@@ -501,14 +497,15 @@ main(void)
   connect_t      *conn      = NULL;
   http_conn_t    *hconn     = NULL;
   struct timeval  tv;
-  endpoint_t     *node      = NULL;
   int             num_ready = 0;
   int             cnum      = 0;
-  sockaddr_t      addr;
+  sockaddr_t addr;
 
-  //fclose(stdin);
-  //fclose(stdout);
-  //fclose(stderr);
+  /*
+    fclose(stdin);
+    fclose(stdout);
+    fclose(stderr);
+  */
 
   max_connects = fdwatch_get_nfiles();
   if (max_connects < 0) {

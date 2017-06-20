@@ -328,15 +328,10 @@ send_mime(http_conn_t *conn,
           time_t       mod)
 {
   time_t      now;
-  time_t      expires;
-  const char *rfc1123fmt      = "%a, %d %b %Y %H:%M:%S GMT";
-  char        nowbuf[100]     = {0};
-  char        modbuf[100]     = {0};
-  char        expbuf[100]     = {0};
-  char        fixed_type[500] = {0};
-  char        buf[1000]       = {0};
-  int         partial         = 0;
-  int s100 = 0;
+  const char *rfc1123fmt  = "%a, %d %b %Y %H:%M:%S GMT";
+  char        nowbuf[100] = {0};
+  char        modbuf[100] = {0};
+  char        buf[1000]   = {0};
 
   conn->status        = status;
   conn->bytes_to_send = length;
@@ -349,14 +344,16 @@ send_mime(http_conn_t *conn,
 
     strftime(nowbuf, sizeof(nowbuf), rfc1123fmt, gmtime(&now));
     strftime(modbuf, sizeof(modbuf), rfc1123fmt, gmtime(&mod));
-    sprintf(buf,
-            "%.20s %d %s\015\012"
-            "Date: %s\015\012"
-            "Server: %s\015\012"
-            "Content-Type: %s\015\012"
-            "Last-Modified: %s\015\012"
-            "Connection: close\015\012",
-            "HTTP/1.1",
+    snprintf(buf,
+             sizeof(buf),
+             "%.20s %d %s\015\012"
+             "Date: %s\015\012"
+             "Server: %s\015\012"
+             "Content-Type: %s\015\012"
+             "Last-Modified: %s\015\012"
+             "Cache-Cache: no-cache,no-store\015\012"
+             "Connection: close\015\012",
+             "HTTP/1.1",
             status,
             title,
             nowbuf,
@@ -365,12 +362,6 @@ send_mime(http_conn_t *conn,
             modbuf);
 
     add_response(conn, buf);
-
-    s100 = status / 100;
-    if (s100 != 2 && s100 != 3) {
-      snprintf(buf, sizeof(buf), "Cache-Control: no-cache,no-store\015\012");
-      add_response(conn, buf);
-    }
 
     if (length >= 0) {
       snprintf(buf, sizeof(buf), "Content-Length: %lld\015\012",
@@ -947,7 +938,6 @@ static
 int
 really_start_request(http_conn_t *conn, struct timeval *tv)
 {
-  size_t       i    = 0;
   endpoint_t  *node = NULL;
   json_node_t *obj  = NULL;
   sm_all_t    *inst = NULL;
@@ -976,14 +966,22 @@ really_start_request(http_conn_t *conn, struct timeval *tv)
   inst = (sm_all_t *)node->instance;
   obj  = json_mkobject();
   (inst->vtab->emit_json)(&obj);
-  conn->data_address  = json_stringify(obj, NULL);
-  conn->bytes_to_send = strlen(conn->data_address);
+  conn->data_address = json_stringify(obj, NULL);
+  //conn->bytes_to_send = strlen(conn->data_address);
 
   if (conn->data_address == NULL) {
     httpd_send_err(conn, 500, err500title, "", err500form);
     return -1;
   }
 
+  send_mime(conn,
+            200,
+            ok200title,
+            "",
+            "",
+            "application/json",
+            strlen(conn->data_address),
+            tv->tv_sec);
   return 0;
 }
 
