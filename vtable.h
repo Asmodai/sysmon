@@ -54,8 +54,10 @@
  * Virtual function table.
  */
 typedef struct {
-  int  (*get_data)(void *);
-  void (*emit_json)(json_node_t **);
+  void   (*get_data)(void *);
+  void   (*emit_json)(json_node_t **);
+  char    *json_buffer;
+  size_t   json_length;
 } sm_vtable_t;
 
 /*
@@ -66,6 +68,8 @@ typedef struct {
 typedef struct {
   sm_vtable_t *vtab;                    /* Virtual function table. */
 } sm_base_t;
+
+void generate_json(sm_base_t *);
 
 #endif /* !_vtable_h_ */
 

@@ -2,6 +2,7 @@
  * httpd.h --- HTTP server
  *
  * Copyright (c) 2017 Paul Ward <asmodai@gmail.com>
+ * Copyright (c) 1995-2015 Jef Poskanzer <jef@mail.acme.com>
  *
  * Author:     Paul Ward <asmodai@gmail.com>
  * Maintainer: Paul Ward <asmodai@gmail.com>
@@ -54,6 +55,8 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 
+#include "json.h"
+
 typedef union {
   struct sockaddr    sa;
   struct sockaddr_in sa_in;
@@ -65,39 +68,37 @@ typedef struct {
 } httpd_t;
 
 typedef struct {
-  int         one_one;                  /* HTTP 1.1 */
-  httpd_t    *server;
-  int         initialised;
-  int         conn_fd;
-  sockaddr_t  client_addr;
-  char       *read_buf;
-  size_t      read_size;
-  size_t      read_idx;
-  size_t      checked_idx;
-  int         checked_state;
-  off_t       bytes_to_send;
-  off_t       bytes_sent;
-  int         method;
-  int         status;
-  int         should_linger;
-  char       *encoded_url;
-  char       *decoded_url;
-  char       *protocol;
-  char       *path;
-  char       *reqhost;
-  char       *hdrhost;
-  char       *query;
-  char       *pathinfo;
-  char       *response;
-  char       *data_address;
-  int         mime_flag;
-  size_t      response_len;
-  size_t      max_query;
-  size_t      max_reqhost;
-  size_t      max_response;
-  size_t      max_decoded_url;
-  size_t      max_path;
-  size_t      max_pathinfo;
+  int          one_one;         /* HTTP 1.1 */
+  httpd_t     *server;
+  int          initialised;
+  int          conn_fd;
+  sockaddr_t   client_addr;
+  char        *read_buf;
+  size_t       read_size;
+  size_t       read_idx;
+  size_t       checked_idx;
+  int          checked_state;
+  off_t        bytes_to_send;
+  off_t        bytes_sent;
+  int          method;
+  int          status;
+  int          should_linger;
+  char        *encoded_url;
+  char        *decoded_url;
+  char        *protocol;
+  char        *path;
+  char        *reqhost;
+  char        *hdrhost;
+  char        *query;
+  char        *response;
+  char        *data_address;
+  int          mime_flag;
+  size_t       response_len;
+  size_t       max_query;
+  size_t       max_reqhost;
+  size_t       max_response;
+  size_t       max_decoded_url;
+  size_t       max_path;
 } http_conn_t;
 
 #define HTTP_METHOD_UNKNOWN 0
@@ -153,6 +154,9 @@ char    *httpd_method_str(int);
 int      httpd_start_request(http_conn_t *, struct timeval *);
 int      httpd_parse_request(http_conn_t *);
 char    *httpd_ntoa(sockaddr_t *);
+void     httpd_terminate(httpd_t *);
+void     httpd_unlisten(httpd_t *);
+void     httpd_destroy_conn(http_conn_t *);
 
 #endif  /* !_httpd_h_ */
 

@@ -218,6 +218,8 @@ sm_info_init(void)
 
     info_instance->vtab->get_data  = NULL;
     info_instance->vtab->emit_json = &emit_info;
+
+    generate_json((sm_base_t *)info_instance);
   }
 
   if (info_endpoint == NULL) {

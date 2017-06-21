@@ -137,7 +137,13 @@ static
 void
 l_remove(timer_task_t *t)
 {
-  int h = t->hash;
+  int h = -1;
+
+  if (t == NULL) {
+    return;
+  }
+
+  h = t->hash;
 
   if (t->prev == NULL) {
     timers[h] = t->next;
@@ -327,6 +333,10 @@ tmr_reset(struct timeval *now, timer_task_t *t)
 void
 tmr_cancel(timer_task_t *t)
 {
+  if (t == NULL) {
+    return;
+  }
+
   l_remove(t);
   timers_active_count--;
 
@@ -353,7 +363,7 @@ tmr_cleanup(void)
 }
 
 void
-tmr_task_term(void)
+tmr_term(void)
 {
   int h = 0;
 

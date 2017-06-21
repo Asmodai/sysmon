@@ -99,11 +99,27 @@ sm_all_init(void)
 
     all_instance->vtab->get_data  = NULL;
     all_instance->vtab->emit_json = &emit_all;
+
+    all_instance->vtab->json_buffer = NULL;
+    all_instance->vtab->json_length = 0;
   }
 
   if (all_endpoint == NULL) {
     all_endpoint = endpoint_create("all", all_instance);
   }
+}
+
+void
+sm_all_update(sm_base_t *endpoint)
+{
+  if (endpoint     == (sm_base_t *)all_instance ||
+      all_instance == NULL                  ||
+      endpoint     == NULL)
+  {
+    return;
+  }
+
+  generate_json((sm_base_t *)all_instance);
 }
 
 /* sm_all.c ends here. */

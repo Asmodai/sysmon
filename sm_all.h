@@ -59,6 +59,7 @@ typedef struct {
 } sm_all_t;
 
 void sm_all_init(void);
+void sm_all_update(sm_base_t *);
 
 #endif /* !_sm_all_h_ */
 

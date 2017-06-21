@@ -88,7 +88,7 @@ void            tmr_run(struct timeval *now);
 void            tmr_reset(struct timeval *now, timer_task_t *timer);
 void            tmr_cancel(timer_task_t *timer);
 void            tmr_cleanup(void);
-void            tmr_task_term(void);
+void            tmr_term(void);
 void            tmr_logstats(long secs);
 
 #endif /* !_timers_h_ */

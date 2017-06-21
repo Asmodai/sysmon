@@ -81,7 +81,6 @@ typedef struct {
   time_t        started;
   time_t        active;
   timer_task_t *wakeup;
-  timer_task_t *linger;
   long          wouldblock_delay;
   off_t         bytes;
   off_t         end_byte_idx;
@@ -92,7 +91,6 @@ typedef struct {
 #define CNST_READING   1
 #define CNST_SENDING   2
 #define CNST_PAUSING   3
-#define CNST_LINGERING 4
 
 static httpd_t    *server             = NULL;
 static connect_t  *connects           = NULL;
@@ -111,6 +109,44 @@ int    stats_simultaneous = 0;
 static void finish_connection(connect_t *, struct timeval *);
 static void clear_connection(connect_t *, struct timeval *);
 
+void
+terminate_app(void)
+{
+  terminate = 1;
+}
+
+static
+void
+shut_down(void)
+{
+  size_t         cnum = 0;
+  struct timeval tv;
+
+  gettimeofday(&tv, NULL);
+  //logstats(&tv);
+  
+  for (cnum = 0; cnum < max_connects; cnum++) {
+    if (connects[cnum].conn != NULL) {
+      httpd_close_conn(connects[cnum].conn);
+      httpd_destroy_conn(connects[cnum].conn);
+      --httpd_conn_count;
+      connects[cnum].conn = NULL;
+    }
+  }
+
+  if (server != NULL) {
+    httpd_t *ptr = server;
+    server       = NULL;
+
+    httpd_terminate(ptr);
+    ptr = NULL;
+  }
+
+  tmr_term();
+
+  free(connects);
+}
+
 static
 void
 idle(timer_clientdata_t data, struct timeval *tv)
@@ -118,8 +154,10 @@ idle(timer_clientdata_t data, struct timeval *tv)
   size_t     cnum = 0;
   connect_t *conn;
 
+  extern void httpd_derp_stats();
+
 #ifdef DEBUG
-  printf("TIMER FIRE - occasional\n");
+  fprintf(stderr, "TIMER FIRE - Occasional\n");
 #endif
 
   for (cnum = 0; cnum < max_connects; cnum++) {
@@ -128,6 +166,10 @@ idle(timer_clientdata_t data, struct timeval *tv)
     switch (conn->state) {
       case CNST_READING:
         if (tv->tv_sec - conn->active >= IDLE_READ_TIMELIMIT) {
+#ifdef DEBUG
+          fprintf(stderr, "TIMING OUT - %.80s [read]\n",
+                  httpd_ntoa(&conn->conn->client_addr));
+#endif
           syslog(LOG_INFO, "%.80s connection timed out whist reading",
                  httpd_ntoa(&conn->conn->client_addr));
           httpd_send_err(conn->conn,
@@ -142,6 +184,11 @@ idle(timer_clientdata_t data, struct timeval *tv)
       case CNST_SENDING:
       case CNST_PAUSING:
         if (tv->tv_sec - conn->active >= IDLE_SEND_TIMELIMIT) {
+#ifdef DEBUG
+          fprintf(stderr, "TIMING OUT - %.80s [write]\n",
+                  httpd_ntoa(&conn->conn->client_addr));
+#endif
+
           syslog(LOG_INFO, "%.80s connection timed out whilst sending",
                  httpd_ntoa(&conn->conn->client_addr));
           clear_connection(conn, tv);
@@ -157,22 +204,11 @@ wakeup_connection(timer_clientdata_t data, struct timeval *tv)
 {
   connect_t *conn = (connect_t *)data.p;
 
+#ifdef DEBUG
+  fprintf(stderr, "TIMER FIRE - Wakeup connection");
+#endif
+
   conn->wakeup = NULL;
-  if (conn->state == CNST_PAUSING) {
-    conn->state = CNST_SENDING;
-    fdwatch_add_fd(conn->conn->conn_fd, conn, FDW_WRITE);
-  }
-}
-
-static
-void
-linger_clear_connection(timer_clientdata_t data, struct timeval *now)
-{
-  connect_t *conn = NULL;
-
-  conn         = (connect_t *)data.p;
-  conn->wakeup = NULL;
-
   if (conn->state == CNST_PAUSING) {
     conn->state = CNST_SENDING;
     fdwatch_add_fd(conn->conn->conn_fd, conn, FDW_WRITE);
@@ -190,11 +226,7 @@ really_clear_connection(connect_t *conn, struct timeval *tv)
   }
 
   httpd_close_conn(conn->conn);
-
-  if (conn->linger != NULL) {
-    tmr_cancel(conn->linger);
-    conn->linger = NULL;
-  }
+  httpd_destroy_conn(conn->conn);
 
   conn->state             = CNST_FREE;
   conn->next_free_connect = first_free_connect;
@@ -206,45 +238,12 @@ static
 void
 clear_connection(connect_t *conn, struct timeval *tv)
 {
-  timer_clientdata_t data;
-
   if (conn->wakeup != NULL) {
     tmr_cancel(conn->wakeup);
     conn->wakeup = NULL;
   }
 
-  if (conn->state == CNST_LINGERING) {
-    tmr_cancel(conn->linger);
-    conn->linger              = NULL;
-    conn->conn->should_linger = 0;
-  }
-
-  if (conn->conn->should_linger) {
-    if (conn->state != CNST_PAUSING) {
-      fdwatch_del_fd(conn->conn->conn_fd);
-    }
-
-    conn->state = CNST_LINGERING;
-    shutdown(conn->conn->conn_fd, SHUT_WR);
-    fdwatch_add_fd(conn->conn->conn_fd, conn, FDW_READ);
-    data.p      = conn;
-
-    if (conn->linger != NULL) {
-      syslog(LOG_ERR, "Replacing non-NULL linger timer!");
-    }
-
-    conn->linger = tmr_create(tv,
-                              linger_clear_connection,
-                              data,
-                              LINGER_TIME,
-                              0);
-    if (conn->linger == NULL) {
-      syslog(LOG_CRIT, "Could not create linger clear timer.");
-      exit(EXIT_FAILURE);
-    }
-  } else {
-    really_clear_connection(conn, tv);
-  }
+  really_clear_connection(conn, tv);
 }
 
 static
@@ -302,7 +301,6 @@ handle_newconnect(struct timeval *tv, int fd)
     ++num_connects;
     conn->active            = tv->tv_sec;
     conn->wakeup            = NULL;
-    conn->linger            = NULL;
     conn->next_byte_idx     = 0;
 
     httpd_set_ndelay(conn->conn->conn_fd);
@@ -335,7 +333,7 @@ handle_read(connect_t *conn, struct timeval *tv)
 
     httpd_realloc_str(&hconn->read_buf,
                       &hconn->read_size,
-                      hconn->read_size + 1000);
+                      hconn->read_size + 128);
   }
 
   sz = read(hconn->conn_fd,
@@ -352,7 +350,7 @@ handle_read(connect_t *conn, struct timeval *tv)
   }
 
   if (sz < 0) {
-    if (errno == EINTR ||
+    if (errno == EINTR  ||
         errno == EAGAIN ||
         errno == EWOULDBLOCK)
     {
@@ -424,15 +422,11 @@ handle_send(connect_t *conn, struct timeval *tv)
   http_conn_t        *hconn     = conn->conn;
   
   if (hconn->response_len == 0) {
-    printf("WRITE - Sending [%s]\n", hconn->data_address);
-
     sz = write(hconn->conn_fd,
                &(hconn->data_address[conn->next_byte_idx]),
                MIN(conn->end_byte_idx - conn->next_byte_idx, max_bytes));
   } else {
     struct iovec iv[2];
-
-    printf("WRITEV - Sending [%s]\n", hconn->data_address);
 
     iv[0].iov_base = hconn->response;
     iv[0].iov_len  = hconn->response_len;
@@ -510,22 +504,38 @@ handle_send(connect_t *conn, struct timeval *tv)
   }
 }
 
-static
+#ifdef DEBUG
 void
-handle_linger(connect_t *conn, struct timeval *tv)
+dump_data(void)
 {
-  char buf[4096] = {0};
-  int r          = -1;
+  size_t cnum  = 0;
+  size_t nulls = 0;
 
-  r = read(conn->conn->conn_fd, buf, sizeof(buf));
-  if (r < 0 && (errno == EINTR || errno == EAGAIN)) {
-    return;
-  }
+  fprintf(stderr, "Connection table:\n");
+  for (cnum = 0; cnum < max_connects; cnum++) {
+    if (connects[cnum].conn != NULL) {
+      fprintf(stderr, "   %06ld -  ", cnum);
+      fprintf(stderr, "state:%d read_size:%ld response_len:%ld\n",
+              connects[cnum].state,
+              connects[cnum].conn->read_size,
+              connects[cnum].conn->response_len);
 
-  if (r <= 0) {
-    really_clear_connection(conn, tv);
+      if (connects[cnum].conn->read_buf != NULL) {
+        fprintf(stderr, "    read_buf:LIAR [%s]\n",
+                connects[cnum].conn->read_buf);
+      }
+
+      if (connects[cnum].conn->response != NULL) {
+        fprintf(stderr, "    response:LIAR [%s]\n",
+                connects[cnum].conn->response);
+      }
+    } else {
+      nulls++;
+    }
   }
+  fprintf(stderr, "%ld NULL entries.\n", nulls);
 }
+#endif
 
 int
 main(void)
@@ -543,7 +553,7 @@ main(void)
     fclose(stderr);
   */
 
-  max_connects = fdwatch_get_nfiles();
+  max_connects = MIN(fdwatch_get_nfiles(), 128);
   if (max_connects < 0) {
     syslog(LOG_CRIT, "fdwatch initialisation failure");
     exit(EXIT_FAILURE);
@@ -588,11 +598,12 @@ main(void)
     syslog(LOG_CRIT, "Could not allocate memory for connection table");
     exit(EXIT_FAILURE);
   }
-  for (cnum = 0; cnum < max_connects; ++cnum) {
+  for (cnum = 0; cnum < max_connects; cnum++) {
     connects[cnum].state             = CNST_FREE;
     connects[cnum].next_free_connect = cnum + 1;
     connects[cnum].conn              = NULL;
   }
+  /* -1 */
   connects[max_connects - 1].next_free_connect = -1;
   first_free_connect                           = 0;
   num_connects                                 = 0;
@@ -604,7 +615,6 @@ main(void)
 
   gettimeofday(&tv, NULL);
   while ((!terminate) || (num_connects > 0)) {
-
     num_ready = fdwatch(tmr_mstimeout(&tv));
     if (num_ready < 0) {
       if (errno == EINTR || errno == EAGAIN) {
@@ -644,14 +654,15 @@ main(void)
         switch (conn->state) {
           case CNST_READING:   handle_read(conn, &tv);    break;
           case CNST_SENDING:   handle_send(conn, &tv);    break;
-          case CNST_LINGERING: handle_linger(conn, &tv);  break;
         }
       }
     }
     tmr_run(&tv);
   }
 
+  shut_down();
   syslog(LOG_NOTICE, "Exiting.");
+
   return 0;
 }
 

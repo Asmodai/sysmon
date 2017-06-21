@@ -1,11 +1,11 @@
 /*
- * utils.h --- Various utilities.
+ * vtable.c --- vtable functions.
  *
- * Copyright (c) 2016 Paul Ward <asmodai@gmail.com>
+ * Copyright (c) 2017 Paul Ward <asmodai@gmail.com>
  *
  * Author:     Paul Ward <asmodai@gmail.com>
  * Maintainer: Paul Ward <asmodai@gmail.com>
- * Created:    30 Dec 2016 01:02:56
+ * Created:    20 Jun 2017 21:53:02
  */
 /* {{{ License: */
 /*
@@ -40,32 +40,40 @@
 /* }}} */
 
 /**
- * @file utils.h
+ * @file vtable.c
  * @author Paul Ward
- * @brief Various utilities.
+ * @brief vtable functions.
  */
 
-#ifndef _utils_h_
-#define _utils_h_
+#include <stdlib.h>
+#include <string.h>
 
-#include <sys/types.h>
+#include "vtable.h"
+#include "sm_all.h"
 
-#ifndef MAX
-# define MAX(__a, __b)     ((__a) > (__b) ? (__a) : (__b))
-#endif
+void
+generate_json(sm_base_t *inst)
+{
+  json_node_t *node = json_mkobject();
 
-#ifndef MIN
-# define MIN(__a, __b)     ((__a) < (__b) ? (__a) : (__b))
-#endif
+  inst->vtab->json_length = 0;
 
-#define MAYBE_FREE(__x)    if ((__x) != NULL) { free((__x)); __x = NULL; }
+  if (inst->vtab->json_buffer != NULL) {
+    free(inst->vtab->json_buffer);
+  }
 
-void          *xmalloc(size_t);
-void          *xrealloc(void *, size_t);
-void          *xcalloc(size_t, size_t);
-unsigned long  pjw_hash(const char *);
-void           strdecode(char *, const char *);
+  if (inst->vtab->get_data != NULL) {
+    (inst->vtab->get_data)(inst);
+  }
 
-#endif /* !_utils_h_ */
+  if (inst->vtab->emit_json != NULL) {
+    (inst->vtab->emit_json)(&node);
+    inst->vtab->json_buffer = json_stringify(node, NULL);
+    inst->vtab->json_length = strlen(inst->vtab->json_buffer);
+    json_delete(node);
 
-/* utils.h ends here. */
+    sm_all_update(inst);
+  }
+}
+
+/* vtable.c ends here. */

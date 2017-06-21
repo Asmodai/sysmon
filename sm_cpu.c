@@ -72,7 +72,7 @@ static const char strArchitecture[] = "architecture";
 static const char strModelName[]    = "model";
 static const char strUpdated[]      = "updatedAt";
 
-int
+void
 get_cpu(void *data)
 {
   sm_cpu_t *ptr = (sm_cpu_t *)data;
@@ -84,15 +84,16 @@ get_cpu(void *data)
   ptr->architecture   = (char *)strUnknown;
   ptr->model          = (char *)strUnknown;
   ptr->time           = time(NULL);
-
-  return 1;
 }
 
 void
 cpu_timer(timer_clientdata_t data, struct timeval *now)
 {
-  printf("Updating CPU...\n");
-  get_cpu((void *)cpu_instance);
+#ifdef DEBUG
+  printf("TIMER FIRE - Updating CPU\n");
+#endif
+
+  generate_json((sm_base_t *)cpu_instance);
 }
 
 void
@@ -137,8 +138,7 @@ sm_cpu_init(void)
     cpu_instance->vtab->get_data  = &get_cpu;
     cpu_instance->vtab->emit_json = &emit_cpu;
 
-    /* We need to populate the struct with initial values. */
-    get_cpu((void *)cpu_instance);
+    generate_json((sm_base_t *)cpu_instance);
   }
 
   if (cpu_endpoint == NULL) {

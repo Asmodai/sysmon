@@ -109,6 +109,8 @@ sm_uname_init(void)
 
     uname_instance->vtab->get_data  = NULL;
     uname_instance->vtab->emit_json = &emit_uname;
+
+    generate_json((sm_base_t *)uname_instance);
   }
 
   if (uname_endpoint == NULL) {

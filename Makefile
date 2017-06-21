@@ -46,6 +46,7 @@ BIN=sysmon
 
 COMMON_SRCS=utils.c     \
 	    json.c      \
+	    vtable.c    \
 	    endpoints.c \
 	    fdwatch.c   \
 	    timers.c    \
@@ -65,6 +66,7 @@ MODULE_SRCS=sm_smver.c \
 
 COMMON_OBJS=utils.o     \
 	    json.o      \
+	    vtable.o    \
 	    endpoints.o \
 	    fdwatch.o   \
 	    timers.o    \

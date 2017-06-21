@@ -88,6 +88,8 @@ sm_smver_init(void)
 
     smver_instance->vtab->get_data  = NULL;
     smver_instance->vtab->emit_json = &emit_smver;
+
+    generate_json((sm_base_t *)smver_instance);
   }
 
   if (smver_endpoint == NULL) {

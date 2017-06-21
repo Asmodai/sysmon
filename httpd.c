@@ -2,6 +2,7 @@
  * httpd.c --- HTTP server.
  *
  * Copyright (c) 2017 Paul Ward <asmodai@gmail.com>
+ * Copyright (c) 1995-2015 Jef Poskanzer <jef@mail.acme.com>
  *
  * Author:     Paul Ward <asmodai@gmail.com>
  * Maintainer: Paul Ward <asmodai@gmail.com>
@@ -67,8 +68,9 @@
 #include "json.h"
 #include "sm_all.h"
 
-static size_t str_alloc_count = 0;
-static size_t str_alloc_size  = 0;
+static size_t  str_alloc_count = 0;
+static size_t  str_alloc_size  = 0;
+static char   *rfc1123fmt      = "%a, %d %b %Y %H:%M:%S GMT";
 
 const char *proto09 = "HTTP/0.9";
 const char *proto10 = "HTTP/1.0";
@@ -189,11 +191,13 @@ httpd_realloc_str(char **ptr, size_t *max, size_t sz)
     *ptr            = malloc(sizeof(char) * *max + 1);
     ++str_alloc_count;
     str_alloc_size += *max;
+    bzero(*ptr, *max + 1);
   } else if (sz > *max) {
     str_alloc_size -= *max;
     *max            = MAX(*max * 2, sz * 5 / 4);
     *ptr            = realloc(*ptr, sizeof(char) * *max + 1);
     str_alloc_size += *max;
+    bzero(*ptr, *max + 1);
   } else {
     return;
   }
@@ -244,7 +248,7 @@ init_listen_sock(sockaddr_t *addr)
 {
   int listen_fd = -1;
   int on        = -1;
-  int flags = -1;
+  int flags     = -1;
 
   if (!sockaddr_check(addr)) {
     syslog(LOG_CRIT, "Unknown address family for listen socket.");
@@ -298,8 +302,6 @@ init_listen_sock(sockaddr_t *addr)
     return -1;
   }
 
-  printf("Listen FD = %d\n", listen_fd);
-
   return listen_fd;
 }
 
@@ -310,6 +312,7 @@ add_response(http_conn_t *conn, char *str)
   size_t len = 0;
 
   len = strlen(str);
+
   httpd_realloc_str(&conn->response,
                     &conn->max_response,
                     conn->response_len + len);
@@ -328,11 +331,10 @@ send_mime(http_conn_t *conn,
           off_t        length,
           time_t       mod)
 {
-  time_t      now;
-  const char *rfc1123fmt  = "%a, %d %b %Y %H:%M:%S GMT";
-  char        nowbuf[100] = {0};
-  char        modbuf[100] = {0};
-  char        buf[1000]   = {0};
+  time_t now         = 0;
+  char   nowbuf[100] = {0};
+  char   modbuf[100] = {0};
+  char   buf[1000]   = {0};
 
   conn->status        = status;
   conn->bytes_to_send = length;
@@ -366,7 +368,7 @@ send_mime(http_conn_t *conn,
 
     if (length >= 0) {
       snprintf(buf, sizeof(buf), "Content-Length: %lld\015\012",
-              (long long)length);
+               (long long)length);
       add_response(conn, buf);
     }
 
@@ -455,13 +457,12 @@ httpd_get_conn(httpd_t *hs, int fd, http_conn_t *conn)
 
   if (!conn->initialised) {
     conn->read_size       = 0;
+    conn->response_len    = 0;
     conn->max_response    = 0;
     conn->max_reqhost     = 0;
     conn->max_query       = 0;
     conn->max_path        = 0;
     conn->max_decoded_url = 0;
-
-    printf("Allocating...\n");
 
     httpd_realloc_str(&conn->read_buf,    &conn->read_size,       500);
     httpd_realloc_str(&conn->decoded_url, &conn->max_decoded_url, 2);
@@ -507,6 +508,7 @@ httpd_get_conn(httpd_t *hs, int fd, http_conn_t *conn)
   conn->read_size      = 0;
   conn->read_idx       = 0;
   conn->checked_idx    = 0;
+  conn->checked_state  = 0;
   conn->bytes_to_send  = 0;
   conn->bytes_sent     = 0;
   conn->method         = HTTP_METHOD_UNKNOWN;
@@ -778,7 +780,6 @@ httpd_parse_request(http_conn_t *conn)
 
   url = strpbrk(method_str, WHITESPACE);
   if (url == NULL) {
-    printf("URL is NULL...\n");
     httpd_send_err(conn, 400, err400title, "", err400form);
     return -1;
   }
@@ -810,12 +811,8 @@ httpd_parse_request(http_conn_t *conn)
 
 #undef WHITESPACE
 
-  printf("protocol is [%s]\n", protocol);
-  printf("url is [%s], does it have http://?\n", url);
-
   if (strncasecmp(url, "http://", 7) == 0) {
     if (!conn->one_one) {
-      printf("HTTP/1.1 and you're trying HTTP/1.0 or 0.9\n");
       httpd_send_err(conn, 400, err400title, "", err400form);
       return -1;
     }
@@ -823,14 +820,12 @@ httpd_parse_request(http_conn_t *conn)
     reqhost = url + 7;
     url = strchr(reqhost, '/');
     if (url == NULL) {
-      printf("URL is NULL after host.\n");
       httpd_send_err(conn, 400, err400title, "", err400form);
       return -1;
     }
     *url = '\0';
 
     if (strchr(reqhost, '/') != NULL || reqhost[0] == '.') {
-      printf("reqhost is derp.\n");
       httpd_send_err(conn, 400, err400title, "", err400form);
       return -1;
     }
@@ -841,7 +836,6 @@ httpd_parse_request(http_conn_t *conn)
   }
 
   if (*url != '/') {
-    printf("URL != /\n");
     httpd_send_err(conn, 400, err400title, "", err400form);
     return -1;
   }
@@ -858,6 +852,7 @@ httpd_parse_request(http_conn_t *conn)
   }
 
   conn->encoded_url = url;
+
   httpd_realloc_str(&conn->decoded_url,
                     &conn->max_decoded_url,
                     strlen(conn->encoded_url));
@@ -874,6 +869,7 @@ httpd_parse_request(http_conn_t *conn)
   cp = strchr(conn->encoded_url, '?');
   if (cp != NULL) {
     ++cp;
+
     httpd_realloc_str(&conn->query,
                       &conn->max_query,
                       strlen(cp));
@@ -890,7 +886,6 @@ httpd_parse_request(http_conn_t *conn)
       (conn->path[0] == '.' && conn->path[1] == '.' &&
        (conn->path[2] == '\0' || conn->path[2] == '/')))
   {
-    printf("Path is broken.\n");
     httpd_send_err(conn, 400, err400title, "", err400form);
     return -1;
   }
@@ -902,8 +897,6 @@ httpd_parse_request(http_conn_t *conn)
       }
 
       if (strncasecmp(buf, "Host:", 5) == 0) {
-        printf("Got a Host header\n");
-
         cp             = &buf[5];
         cp            += strspn(cp, " \t");
         conn->hdrhost  = cp;
@@ -916,7 +909,6 @@ httpd_parse_request(http_conn_t *conn)
         if (strchr(conn->hdrhost, '/') != NULL ||
             conn->hdrhost [0]          == '.')
         {
-          printf("No Host: header.\n");
           httpd_send_err(conn, 400, err400title, "", err400form);
           return -1;
         }
@@ -926,7 +918,6 @@ httpd_parse_request(http_conn_t *conn)
 
   if (conn->one_one) {
     if (conn->reqhost[0] == '\0' && conn->hdrhost[0] == '\0') {
-      printf("Stupid Host header [%s]\n", conn->reqhost);
       httpd_send_err(conn, 400, err400title, "", err400form);
       return -1;
     }
@@ -939,9 +930,12 @@ static
 int
 really_start_request(http_conn_t *conn, struct timeval *tv)
 {
-  endpoint_t  *node = NULL;
-  json_node_t *obj  = NULL;
-  sm_all_t    *inst = NULL;
+  endpoint_t  *node      = NULL;
+  sm_base_t   *inst      = NULL;
+#ifdef DEBUG
+  char         buf[1024] = {0};
+  time_t       now       = 0;
+#endif
 
   if (conn->method != HTTP_METHOD_GET  &&
       conn->method != HTTP_METHOD_HEAD &&
@@ -951,26 +945,63 @@ really_start_request(http_conn_t *conn, struct timeval *tv)
     return -1;
   }
 
-  printf("Request\n");
-  printf("  Method:   %s\n", httpd_method_str(conn->method));
-  printf("  Protocol: %s\n", conn->protocol);
-  printf("  URL:      %s\n", conn->decoded_url);
-  printf("  Query:    %s\n", conn->query);
-  printf("  Path:     %s\n", conn->path);
+#ifdef DEBUG
+  now = time(NULL);
+  strftime(buf, sizeof(buf), rfc1123fmt, gmtime(&now));
+
+  fprintf(stderr, "Request\n");
+  fprintf(stderr, "  Date:         %s\n", buf);
+  fprintf(stderr, "  Method:       %s\n", httpd_method_str(conn->method));
+  fprintf(stderr, "  Protocol:     %s\n", conn->protocol);
+  fprintf(stderr, "  URL:          %s\n", conn->decoded_url);
+  fprintf(stderr, "  Path:         %s\n", conn->path);
+  fprintf(stderr, "  Query:        %s\n", conn->query);
+  fprintf(stderr, "  Request host: %s\n", conn->reqhost);
+  fprintf(stderr, "  Header host:  %s\n", conn->hdrhost);
+#endif
+
+  if ((strcmp(conn->path, "die")) == 0) {
+      extern void terminate_app(void);
+
+      httpd_send_err(conn, 200, ok200title, "", "OK");
+
+      terminate_app();
+
+      return 0;
+  }
+#ifdef DEBUG
+  else if ((strcmp(conn->path, "derp")) == 0) {
+    extern void dump_data(void);
+
+    httpd_send_err(conn, 200, ok200title, "", "OK");
+    dump_data();
+
+    return 0;
+  }
+#endif
 
   node = endpoint_find(conn->path);
   if (node == NULL) {
+    syslog(LOG_ERR, "Could not find route for %s", conn->path);
     httpd_send_err(conn, 404, err404title, "", err404form);
     return -1;
   }
 
-  inst = (sm_all_t *)node->instance;
-  obj  = json_mkobject();
-  (inst->vtab->emit_json)(&obj);
-  conn->data_address = json_stringify(obj, NULL);
-  //conn->bytes_to_send = strlen(conn->data_address);
+  inst = (sm_base_t *)node->instance;
+  if (inst == NULL) {
+    syslog(LOG_ERR, "Could not get endpoint instance for %s", conn->path);
+    httpd_send_err(conn, 500, err500title, "", err500form);
+    return -1;
+  }
+
+  if (inst->vtab->json_buffer == NULL) {
+    generate_json(inst);
+  }
+
+  conn->data_address = inst->vtab->json_buffer;
 
   if (conn->data_address == NULL) {
+    syslog(LOG_ERR, "Conversion to JSON failed for route %s", conn->path);
     httpd_send_err(conn, 500, err500title, "", err500form);
     return -1;
   }
@@ -981,7 +1012,7 @@ really_start_request(http_conn_t *conn, struct timeval *tv)
             "",
             "",
             "application/json",
-            strlen(conn->data_address),
+            inst->vtab->json_length,
             tv->tv_sec);
   return 0;
 }
@@ -990,6 +1021,53 @@ int
 httpd_start_request(http_conn_t *conn, struct timeval *tv)
 {
   return really_start_request(conn, tv);
+}
+
+void
+httpd_terminate(httpd_t *server)
+{
+  httpd_unlisten(server);
+
+  httpd_free(server);
+}
+
+void
+httpd_unlisten(httpd_t *server)
+{
+  if (server->listen_fd != -1) {
+    close(server->listen_fd);
+    server->listen_fd = -1;
+  }
+}
+
+void
+httpd_destroy_conn(http_conn_t *conn)
+{
+  if (conn->initialised) {
+    MAYBE_FREE(conn->read_buf);
+    MAYBE_FREE(conn->decoded_url);
+    MAYBE_FREE(conn->reqhost);
+    MAYBE_FREE(conn->query);
+    MAYBE_FREE(conn->response);
+    MAYBE_FREE(conn->path);
+
+    conn->read_buf     = NULL;
+    conn->data_address = NULL;
+    conn->encoded_url  = NULL;
+    conn->protocol     = NULL;
+    conn->hdrhost      = NULL;
+
+    str_alloc_size -= conn->read_size;
+    str_alloc_size -= conn->max_decoded_url;
+    str_alloc_size -= conn->max_reqhost;
+    str_alloc_size -= conn->max_query;
+    str_alloc_size -= conn->max_response;
+    str_alloc_size -= conn->max_path;
+
+    conn->read_size    = 0;
+    conn->response_len = 0;
+    conn->initialised  = 0;
+  }
 }
 
 /* httpd.c ends here. */
