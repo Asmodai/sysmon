@@ -74,6 +74,36 @@
 #include "sm_cpu.h"
 #include "sm_all.h"
 
+#if PLATFORM_EQ(PLATFORM_BSD)
+# if PLATFORM_LT(PLATFORM_BSD, PLATFORM_BSDOS)
+#  include <sys/uio.h>
+extern gettimeofday();
+extern free();
+extern fprintf();
+extern syslog();
+extern read();
+extern write();
+extern writev();
+extern strerror();
+extern time();
+extern bcopy();
+extern bzero();
+extern memset();
+typedef signed long ssize_t;
+#  define memmove(__d, __s, __n)  bcopy((__s), (__d), (__n))
+#  ifndef EXIT_FAILURE
+#   define EXIT_FAILURE 1
+#  endif
+#  if PLATFORM_EQ(PLATFORM_ULTRIX)
+extern void *malloc(size_t);
+extern void *realloc(void *, size_t);
+#  else
+extern char *malloc();
+extern char *realloc();
+#  endif
+# endif
+#endif
+
 typedef struct {
   int           state;
   int           next_free_connect;
@@ -276,7 +306,7 @@ handle_newconnect(struct timeval *tv, int fd)
 
     conn = &connects[first_free_connect];
     if (conn->conn == NULL) {
-      conn->conn = malloc(sizeof(http_conn_t));
+      conn->conn = (http_conn_t *)malloc(sizeof(http_conn_t));
       if (conn->conn == NULL) {
         syslog(LOG_CRIT, "Out of memory allocating HTTP connection.");
         exit(EXIT_FAILURE);
@@ -554,7 +584,7 @@ main(void)
   */
 
   max_connects = MIN(fdwatch_get_nfiles(), 128);
-  if (max_connects < 0) {
+  if (max_connects <= 0) {
     syslog(LOG_CRIT, "fdwatch initialisation failure");
     exit(EXIT_FAILURE);
   }

@@ -48,6 +48,8 @@
 #ifndef _sm_cpu_h_
 #define _sm_cpu_h_
 
+#include <sys/types.h>
+
 #include "vtable.h"
 
 typedef struct {

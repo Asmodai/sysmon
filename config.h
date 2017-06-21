@@ -60,6 +60,7 @@
 #include "support/posix.h"
 #include "support/xopen.h"
 #include "support/support.h"
+#include "support/features.h"
 
 #if COMPILER_GT(COMPILER_GCC, COMPILER_GCC30)
 # define HAVE_STDINT_H

@@ -55,8 +55,12 @@ COMMON_SRCS=utils.c     \
 
 BSD_SRCS=4bsd_utsname.c
 
-POSIX_SRCS=posix_strtod.c \
-	   posix_strdup.c
+POSIX_SRCS=posix_strtod.c   \
+	   posix_strdup.c   \
+	   posix_strerror.c \
+	   posix_snprintf.c \
+	   posix_strftime.c \
+	   posix_strstr.c
 
 MODULE_SRCS=sm_smver.c \
 	    sm_uname.c \
@@ -75,7 +79,11 @@ COMMON_OBJS=utils.o     \
 
 BSD_OBJS=4bsd_utsname.o
 
-POSIX_OBJS=posix_strtod.o \
+POSIX_OBJS=posix_strtod.o   \
+	   posix_strstr.o   \
+	   posix_strerror.o \
+	   posix_snprintf.o \
+	   posix_strftime.o \
 	   posix_strdup.o
 
 MODULE_OBJS=sm_smver.o \

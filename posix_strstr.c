@@ -1,11 +1,11 @@
 /*
- * features.h --- Platform features.
+ * posix_strstr.c --- `strstr' for platforms that lack it.
  *
  * Copyright (c) 2017 Paul Ward <asmodai@gmail.com>
  *
  * Author:     Paul Ward <asmodai@gmail.com>
  * Maintainer: Paul Ward <asmodai@gmail.com>
- * Created:    01 Jan 2017 08:15:16
+ * Created:    21 Jun 2017 01:39:47
  */
 /* {{{ License: */
 /*
@@ -40,56 +40,49 @@
 /* }}} */
 
 /**
- * @file features.h
+ * @file posix_strstr.c
  * @author Paul Ward
- * @brief Platform features.
+ * @brief `strstr' for platforms that lack it.
  */
 
-#ifndef _features_h_
-#define _features_h_
+#include "config.h"
 
-#include "platform.h"
+#include <sys/types.h>
 
-/*
- * The following systems do not have a `uname` syscall:
- *
- *   o 4.2 BSD,
- *   o 4.3 BSD,
- *   o NeXTSTEP,
- *   o OPENSTEP,
- *   o Rhapsody
- */
-#if PLATFORM_LT(PLATFORM_BSD, PLATFORM_44BSD) || \
-  PLATFORM_LT(PLATFORM_NEXT, PLATFORM_MACOSX)
-# undef HAVE_SYS_UTSNAME_H
-#else
-# define HAVE_SYS_UTSNAME_H
-#endif
+#include <stdlib.h>
 
-/*
- * Lots of older systems lack stdint.h and stdbool.h
- */
-#if PLATFORM_EQ(PLATFORM_LINUX) || \
-  PLATFORM_GTE(PLATFORM_BSD, PLATFORM_FREEBSD) || \
-  PLATFORM_GTE(PLATFORM_NEXT, PLATFORM_OSX) || \
-  PLATFORM_GTE(PLATFORM_SVR4, PLATFORM_SOLARIS) || \
-  PLATFORM_GTE(PLATFORM_SVR3, PLATFORM_AIX)
-# define HAVE_STDINT_H
-# define HAVE_STDBOOL_H
-#endif
+char *
+strstr(register char *string,
+       char          *substring)
+{
+  register char *a = NULL;
+  register char *b = NULL;
 
-/*
- * For systems that miss EXIT_FAILURE and EXIT_SUCCESS
- */
-#if PLATFORM_LT(PLATFORM_BSD, PLTFORM_BSDOS)
-# ifndef EXIT_FAILURE
-#  define EXIT_FAILURE 1
-# endif
-# ifndef EXIT_SUCCESS
-#  define EXIT_SUCCESS 0
-# endif
-#endif
+  b = substring;
+  if (*b == 0) {
+    return string;
+  }
 
-#endif /* !_features_h_ */
+  for (; *string != 0; string++) {
+    if (*string != *b) {
+      continue;
+    }
 
-/* features.h ends here. */
+    a = string;
+    while (1) {
+      if (*b == 0) {
+        return string;
+      }
+
+      if (*a++ != *b++) {
+        break;
+      }
+    }
+
+    b = substring;
+  }
+
+  return NULL;
+}
+
+/* posix_strstr.c ends here. */

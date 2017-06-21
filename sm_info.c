@@ -49,16 +49,13 @@
 #include <stdio.h>
 #include <strings.h>
 
+#include "config.h"
 #include "json.h"
 #include "vtable.h"
 #include "sm_info.h"
 #include "endpoints.h"
 #include "version.h"
 #include "utils.h"
-
-#include "support/compiler.h"
-#include "support/posix.h"
-#include "support/xopen.h"
 
 static endpoint_t *info_endpoint = NULL;
 static sm_info_t  *info_instance = NULL;
@@ -75,10 +72,19 @@ static char *stdc_info  = NULL;
 
 const size_t info_size = 128;
 
+#if PLATFORM_EQ(PLATFORM_BSD)
+# if PLATFORM_GTE(PLATFORM_BSD, PLATFORM_ULTRIX)
+  extern void bzero();
+# else
+  extern int bzero();
+# endif
+#endif
+
 static
 void
 make_c_standard_info(void)
 {
+
   if (stdc_info == NULL) {
     stdc_info = xmalloc(sizeof *stdc_info * info_size);
     bzero(stdc_info, sizeof *stdc_info * info_size);

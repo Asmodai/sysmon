@@ -51,6 +51,7 @@
 #include <strings.h>
 #include <time.h>
 
+#include "config.h"
 #include "json.h"
 #include "vtable.h"
 #include "sm_cpu.h"
@@ -72,17 +73,35 @@ static const char strArchitecture[] = "architecture";
 static const char strModelName[]    = "model";
 static const char strUpdated[]      = "updatedAt";
 
+#if PLATFORM_EQ(PLATFORM_BSD)
+# if PLATFORM_GTE(PLATFORM_BSD, PLATFORM_ULTRIX)
+# else
+extern long time();
+extern      printf();
+# endif
+#endif
+
 void
 get_cpu(void *data)
 {
   sm_cpu_t *ptr = (sm_cpu_t *)data;
 
+#if PLATFORM_EQ(PLATFORM_BSD)
+  ptr->num_configured = 1;
+  ptr->num_online     = 1;
+  ptr->clock_speed    = 0;
+  ptr->word_size      = __WORDSIZE;
+  ptr->architecture   = (char *)strUnknown;
+  ptr->model          = (char *)strUnknown;
+#else
   ptr->num_configured = sysconf(_SC_NPROCESSORS_CONF);
   ptr->num_online     = sysconf(_SC_NPROCESSORS_ONLN);
   ptr->clock_speed    = 0;
   ptr->word_size      = __WORDSIZE;
   ptr->architecture   = (char *)strUnknown;
   ptr->model          = (char *)strUnknown;
+#endif
+
   ptr->time           = time(NULL);
 }
 

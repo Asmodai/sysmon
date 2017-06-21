@@ -55,10 +55,7 @@
 #include <signal.h>
 #include <syslog.h>
 #include <time.h>
-#include <sys/types.h>
-#include <sys/socket.h>
-#include <netinet/in.h>
-#include <arpa/inet.h>
+#include <fcntl.h>
 
 #include "config.h"
 #include "version.h"
@@ -67,6 +64,46 @@
 #include "endpoints.h"
 #include "json.h"
 #include "sm_all.h"
+
+#if PLATFORM_EQ(PLATFORM_BSD)
+# if PLATFORM_LT(PLATFORM_BSD, PLATFORM_BSDOS)
+extern char *strstr();
+extern char *strerror();
+extern char *strftime();
+extern       snprintf();
+extern       memset();
+extern       bzero();
+extern       bcopy();
+extern       syslog();
+extern       free();
+extern       socket();
+extern       setsockopt();
+extern       bind();
+extern       listen();
+extern       accept();
+extern       close();
+extern       write();
+extern       writev();
+extern       printf();
+extern       fprintf();
+extern       sleep();
+extern       perror();
+extern       time();
+extern       fcntl();
+typedef int socklen_t;
+#  ifndef EXIT_FAILURE
+#   define EXIT_FAILURE 1
+#  endif
+#  define memmove(__d, __s, __n)  bcopy((__s), (__d), (__n))
+#  if PLATFORM_EQ(PLATFORM_ULTRIX)
+extern void *malloc(size_t);
+extern void *realloc(void *, size_t);
+#  else
+extern char *malloc();
+extern char *realloc();
+#  endif
+# endif
+#endif
 
 static size_t  str_alloc_count = 0;
 static size_t  str_alloc_size  = 0;
@@ -413,7 +450,7 @@ httpd_init(sockaddr_t *addr, int max_age)
 {
   httpd_t *hs = NULL;
 
-  if ((hs = malloc(sizeof(httpd_t))) == 0) {
+  if ((hs = (httpd_t *)malloc(sizeof(httpd_t))) == 0) {
     syslog(LOG_CRIT, "Out of memory allocating HTTP server");
     return NULL;
   }
