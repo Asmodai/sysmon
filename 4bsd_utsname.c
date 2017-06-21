@@ -82,6 +82,7 @@ uname(struct utsname *name)
   extern       open();
   extern       lseek();
   extern       read();
+  extern       close();
 
   memset(name->sysname,  0, _SYS_NAMELEN);
   memset(name->nodename, 0, _SYS_NAMELEN);
@@ -107,6 +108,7 @@ uname(struct utsname *name)
 
   lseek(kmem, (long)knl[0].n_value, L_SET);
   read(kmem, name->version, _SYS_NAMELEN);
+  close(kmem);
 
   while ((p = index(name->version, '\n')) != NULL) {
     *p = ' ';
