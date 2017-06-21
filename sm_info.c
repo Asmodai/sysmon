@@ -227,8 +227,7 @@ sm_info_init(void)
     info_instance       = xmalloc(sizeof(sm_info_t));
     info_instance->vtab = xmalloc(sizeof(sm_vtable_t));
 
-    info_instance->vtab->get_data  = NULL;
-    info_instance->vtab->emit_json = &emit_info;
+    MAKE_VTABLE(info_instance, NULL, &emit_info, 1);
 
     generate_json((sm_base_t *)info_instance);
   }

@@ -99,6 +99,7 @@ sm_all_init(void)
 
     all_instance->vtab->get_data  = NULL;
     all_instance->vtab->emit_json = &emit_all;
+    all_instance->vtab->only_once = 0;
 
     all_instance->vtab->json_buffer = NULL;
     all_instance->vtab->json_length = 0;

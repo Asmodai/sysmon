@@ -50,6 +50,14 @@
 
 #include "json.h"
 
+#define MAKE_VTABLE(__inst, __get, __emit, __once) \
+  (__inst)->vtab->get_data    = (__get);           \
+  (__inst)->vtab->emit_json   = (__emit);          \
+  (__inst)->vtab->only_once   = (__once);          \
+  (__inst)->vtab->json_buffer = NULL;              \
+  (__inst)->vtab->json_length = 0;                 \
+  (__inst)->vtab->done_once   = 0
+
 /*
  * Virtual function table.
  */
@@ -58,6 +66,8 @@ typedef struct {
   void   (*emit_json)(json_node_t **);
   char    *json_buffer;
   size_t   json_length;
+  int      only_once;
+  int      done_once;
 } sm_vtable_t;
 
 /*

@@ -56,7 +56,11 @@ generate_json(sm_base_t *inst)
 {
   json_node_t *node = json_mkobject();
 
-  inst->vtab->json_length = 0;
+  if (inst->vtab->only_once == 1 &&
+      inst->vtab->done_once == 1)
+  {
+    return;
+  }
 
   if (inst->vtab->json_buffer != NULL) {
     free(inst->vtab->json_buffer);

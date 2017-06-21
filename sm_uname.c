@@ -107,8 +107,7 @@ sm_uname_init(void)
     uname_instance       = xmalloc(sizeof(sm_uname_t));
     uname_instance->vtab = xmalloc(sizeof(sm_vtable_t));
 
-    uname_instance->vtab->get_data  = NULL;
-    uname_instance->vtab->emit_json = &emit_uname;
+    MAKE_VTABLE(uname_instance, NULL, &emit_uname, 1);
 
     generate_json((sm_base_t *)uname_instance);
   }

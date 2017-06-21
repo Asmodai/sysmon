@@ -86,8 +86,7 @@ sm_smver_init(void)
     smver_instance       = xmalloc(sizeof(sm_smver_t));
     smver_instance->vtab = xmalloc(sizeof(sm_vtable_t));
 
-    smver_instance->vtab->get_data  = NULL;
-    smver_instance->vtab->emit_json = &emit_smver;
+    MAKE_VTABLE(smver_instance, NULL, &emit_smver, 1);
 
     generate_json((sm_base_t *)smver_instance);
   }

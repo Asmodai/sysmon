@@ -154,8 +154,7 @@ sm_cpu_init(void)
     cpu_instance       = xmalloc(sizeof(sm_cpu_t));
     cpu_instance->vtab = xmalloc(sizeof(sm_vtable_t));
 
-    cpu_instance->vtab->get_data  = &get_cpu;
-    cpu_instance->vtab->emit_json = &emit_cpu;
+    MAKE_VTABLE(cpu_instance, &get_cpu, &emit_cpu, 0);
 
     generate_json((sm_base_t *)cpu_instance);
   }
