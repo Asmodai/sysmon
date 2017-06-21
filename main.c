@@ -583,12 +583,15 @@ main(void)
     fclose(stderr);
   */
 
-  max_connects = MIN(fdwatch_get_nfiles(), 128);
+  max_connects = MIN(fdwatch_get_nfiles(), 8);
   if (max_connects <= 0) {
     syslog(LOG_CRIT, "fdwatch initialisation failure");
     exit(EXIT_FAILURE);
   }
+
+/*
   max_connects -= SPARE_FDS;
+ */
 
   tmr_init();
   endpoint_init();
