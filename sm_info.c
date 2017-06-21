@@ -50,6 +50,7 @@
 #include <strings.h>
 
 #include "config.h"
+#include "support/compiler.h"
 #include "json.h"
 #include "vtable.h"
 #include "sm_info.h"
@@ -96,6 +97,10 @@ make_c_standard_info(void)
 
       case STANDARD_C90:
         sprintf(stdc_info, "ISO/IEC 9899:1990 (C90)");
+        break;
+
+      case STANDARD_C95:
+        sprintf(stdc_info, "ISO/IEC 9899:1995 (C95)");
         break;
 
       case STANDARD_C99:

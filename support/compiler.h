@@ -77,7 +77,7 @@
 # else
 #  define COMPILER COMPILER_GCC
 # endif
-#elif
+#else
 # define COMPILER COMPILER_UNKNOWN
 #endif
 
