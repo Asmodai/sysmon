@@ -572,10 +572,10 @@ main(void)
 {
   connect_t      *conn      = NULL;
   http_conn_t    *hconn     = NULL;
-  struct timeval  tv;
+  struct timeval  tv        = { 0 };
   int             num_ready = 0;
   int             cnum      = 0;
-  sockaddr_t addr;
+  sockaddr_t      addr;
 
   /*
     fclose(stdin);

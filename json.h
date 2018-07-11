@@ -89,6 +89,7 @@ struct json_node_s {
 };
 
 char        *json_encode(const json_node_t *node);
+json_node_t *json_decode(const char *json);
 char        *json_encode_string(const char *str);
 char        *json_stringify(const json_node_t *node, const char *space);
 void         json_delete(json_node_t *node);

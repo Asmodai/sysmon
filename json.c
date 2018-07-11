@@ -108,19 +108,19 @@ utf8_validate_cz(const char *s)
 {
   unsigned char c = *s++;
   
-  if (c <= 0x7F) {                      /* 00..7F */
+  if (c <= 0x7F) {              /* 00..7F */
     return 1;
-  } else if (c <= 0xC1) {               /* 80..C1 */
+  } else if (c <= 0xC1) {       /* 80..C1 */
     /* Disallow overlong 2-byte sequence. */
     return 0;
-  } else if (c <= 0xDF) {               /* C2..DF */
+  } else if (c <= 0xDF) {       /* C2..DF */
     /* Make sure subsequent byte is in the range 0x80..0xBF. */
     if (((unsigned char)*s++ & 0xC0) != 0x80) {
       return 0;
     }
 
     return 2;
-  } else if (c <= 0xEF) {               /* E0..EF */
+  } else if (c <= 0xEF) {       /* E0..EF */
     /* Disallow overlong 3-byte sequence. */
     if (c == 0xE0 && (unsigned char)*s < 0xA0) {
       return 0;
@@ -140,7 +140,7 @@ utf8_validate_cz(const char *s)
     }
     
     return 3;
-  } else if (c <= 0xF4) {               /* F0..F4 */
+  } else if (c <= 0xF4) {       /* F0..F4 */
     /* Disallow overlong 4-byte sequence. */
     if (c == 0xF0 && (unsigned char)*s < 0x90) {
       return 0;
@@ -163,7 +163,7 @@ utf8_validate_cz(const char *s)
     }
     
     return 4;
-  } else {                              /* F5..FF */
+  } else {                      /* F5..FF */
     return 0;
   }
 }
@@ -173,7 +173,7 @@ static
 bool
 utf8_validate(const char *s)
 {
-  int len;
+  int len = 0;
   
   for (; *s != 0; s += len) {
     len = utf8_validate_cz(s);
@@ -201,10 +201,10 @@ utf8_read_char(const char *s, uchar_t *out)
   
   assert(utf8_validate_cz(s));
 
-  if (c[0] <= 0x7F) {                   /* 00..7F */
+  if (c[0] <= 0x7F) {           /* 00..7F */
     *out = c[0];
     return 1;
-  } else if (c[0] <= 0xDF) {            /* C2..DF (unless input is invalid) */
+  } else if (c[0] <= 0xDF) {    /* C2..DF (unless input is invalid) */
     *out = ((uchar_t)c[0] & 0x1F) << 6 |
            ((uchar_t)c[1] & 0x3F);
     return 2;
@@ -214,7 +214,7 @@ utf8_read_char(const char *s, uchar_t *out)
            ((uchar_t)c[1] & 0x3F) << 6  |
            ((uchar_t)c[2] & 0x3F);
     return 3;
-  } else {                              /* F0..F4 (unless input is invalid) */
+  } else {                      /* F0..F4 (unless input is invalid) */
     *out = ((uchar_t)c[0] &  0x7) << 18 |
            ((uchar_t)c[1] & 0x3F) << 12 |
            ((uchar_t)c[2] & 0x3F) << 6  |
@@ -223,20 +223,59 @@ utf8_read_char(const char *s, uchar_t *out)
   }
 }
 
-/*
- * Construct a UTF-16 surrogate pair given a Unicode codepoint.
- *
- * @unicode must be U+10000..U+10FFFF.
- */
+static
+int
+utf8_write_char(uchar_t unicode, char *out)
+{
+  unsigned char *o = (unsigned char *)out;
+
+  assert(unicode <= 0x10FFFF &&
+         !(unicode >= 0xD800 && unicode <= 0xDFFF));
+
+  if (unicode <= 0x7F) {
+    *o++ = unicode;
+    return 1;
+  } else if (unicode <= 0x7FF) {
+    *o++ = 0xC0 | unicode >> 6;
+    *o++ = 0x80 | (unicode & 0x3F);
+    return 2;
+  } else if (unicode <= 0xFFFF) {
+    *o++ = 0xE0 | unicode >> 12;
+    *o++ = 0x80 | (unicode >> 6 & 0x3F);
+    *o++ = 0x80 | (unicode & 0x3F);
+    return 3;
+  } else {
+    *o++ = 0xF0 | unicode >> 18;
+    *o++ = 0x80 | (unicode >> 12 & 0x3F);
+    *o++ = 0x80 | (unicode >> 6 & 0x3F);
+    *o++ = 0x80 | (unicode & 0x3F);
+    return 4;
+  }
+}
+
+static
+bool
+from_surrogate_pair(uint16_t uc, uint16_t lc, uchar_t *unicode)
+{
+  if (uc >= 0xD800 && uc <= 0xDBFF &&
+      lc >= 0xDC00 && lc <= 0xDFFF)
+  {
+    *unicode = 0x10000 + ((((uchar_t)uc & 0x3FF) << 10) | (lc & 0x3FF));
+    return true;
+  }
+
+  return false;
+}
+
 static
 void
 to_surrogate_pair(uchar_t unicode, uint16_t *uc, uint16_t *lc)
 {
-  uchar_t n;
+  uchar_t n = 0;
   
   assert(unicode >= 0x10000 && unicode <= 0x10FFFF);
   
-  n = unicode - 0x10000;
+  n   = unicode - 0x10000;
   *uc = ((n >> 10) & 0x3FF) | 0xD800;
   *lc = (n & 0x3FF) | 0xDC00;
 }
@@ -312,6 +351,14 @@ sb_finish(SB *sb)
   return sb->start;
 }
 
+static
+void
+sb_free(SB *sb)
+{
+  free(sb->start);
+  sb->start = NULL;
+}
+
 static void emit_value(SB *out, const json_node_t *node);
 static void emit_value_indented(SB                *out,
                                 const json_node_t *node,
@@ -330,6 +377,12 @@ static void emit_object_indented(SB                *out,
                                  const char        *space,
                                  int                indent_level);
 
+static bool parse_array(const char **sp, json_node_t **out);
+static bool parse_object(const char **sp, json_node_t **out);
+static bool parse_value(const char **sp, json_node_t **out);
+bool        parse_string(const char **sp, char **out);
+static bool parse_number(const char **sp, double *out);
+
 static int write_hex16(char *out, uint16_t val);
 
 static json_node_t *mknode(json_tag_t tag);
@@ -342,6 +395,26 @@ static void         append_member(json_node_t *object,
 static bool tag_is_valid(unsigned int tag);
 static bool number_is_valid(const char *num);
 
+json_node_t *
+json_decode(const char *json)
+{
+  const char  *s   = json;
+  json_node_t *ret = NULL;
+
+  skip_space(&s);
+  if (!parse_value(&s, &ret)) {
+    return NULL;
+  }
+
+  skip_space(&s);
+  if (*s != 0) {
+    json_delete(ret);
+    return NULL;
+  }
+
+  return ret;
+}
+
 char *
 json_encode(const json_node_t *node)
 {
@@ -351,7 +424,7 @@ json_encode(const json_node_t *node)
 char *
 json_encode_string(const char *str)
 {
-  SB sb;
+  SB sb = { 0 };
 
   sb_init(&sb);
   emit_string(&sb, str);
@@ -362,7 +435,7 @@ json_encode_string(const char *str)
 char *
 json_stringify(const json_node_t *node, const char *space)
 {
-  SB sb;
+  SB sb = { 0 };
 
   sb_init(&sb);
 
@@ -384,6 +457,7 @@ json_delete(json_node_t *node)
     switch (node->tag) {
       case JSON_STRING:
         free(node->_u._string);
+        node->_u._string = NULL;
         break;
 
       case JSON_ARRAY:
@@ -404,6 +478,7 @@ json_delete(json_node_t *node)
     }
 
     free(node);
+    node = NULL;
   }
 }
 
@@ -431,7 +506,7 @@ json_find_element(json_node_t *array, size_t index)
 json_node_t *
 json_find_member(json_node_t *object, const char *name)
 {
-  json_node_t *member;
+  json_node_t *member = NULL;
 
   if (object == NULL || object->tag != JSON_OBJECT) {
     return NULL;
@@ -624,6 +699,7 @@ json_remove_from_parent(json_node_t *node)
     }
 
     free(node->key);
+    node->key = NULL;
 
     node->parent = NULL;
     node->prev   = node->next = NULL;
@@ -694,7 +770,7 @@ emit_array_indented(SB                *out,
                     int                ilevel)
 {
   const json_node_t *element = array->_u.children.head;
-  int i;
+  int                i       = 0;
 
   if (element == NULL) {
     sb_puts(out, "[]");
@@ -723,7 +799,7 @@ static
 void
 emit_object(SB *out, const json_node_t *object)
 {
-  const json_node_t *member;
+  const json_node_t *member = NULL;
 
   sb_putc(out, '{');
 
@@ -748,7 +824,7 @@ emit_object_indented(SB                *out,
                      int                ilevel)
 {
   const json_node_t *member = object->_u.children.head;
-  int i = 0;
+  int                i      = 0;
 
   if (member == NULL) {
     sb_puts(out, "{}");
@@ -782,7 +858,7 @@ emit_string(SB *out, const char *str)
 {
   bool        escape_unicode = false;
   const char *s              = str;
-  char *b = NULL;
+  char       *b              = NULL;
 
   assert(utf8_validate(str));
 
@@ -821,7 +897,7 @@ emit_string(SB *out, const char *str)
           }
           s++;
         } else if (c < 0x1F || (c >= 0x80 && escape_unicode)) {
-          uint32_t unicode;
+          uint32_t unicode = 0;
 
           s += utf8_read_char(s, &unicode);
 
@@ -830,7 +906,8 @@ emit_string(SB *out, const char *str)
             *b++ = 'u';
             b += write_hex16(b, unicode);
           } else {
-            uint16_t uc, lc;
+            uint16_t uc = 0;
+            uint16_t lc = 0;
             assert(unicode <= 0x10FFFF);
 
             to_surrogate_pair(unicode, &uc, &lc);
@@ -853,7 +930,7 @@ emit_string(SB *out, const char *str)
 
     out->cur = b;
     sb_need(out, 14);
-    b = out->cur;
+    b        = out->cur;
   }
 
   *b++ = '"';
@@ -865,7 +942,7 @@ static
 void
 emit_number(SB *out, double num)
 {
-  char buf[64];
+  char buf[64] = { 0 };
   sprintf(buf, "%.16g", num);
 
   if (number_is_valid(buf)) {
@@ -880,6 +957,391 @@ bool
 tag_is_valid(unsigned int tag)
 {
   return (tag < VALID_JSON_TAG);
+}
+
+static
+bool
+expect_literal(const char **sp, const char *str)
+{
+  const char *s = *sp;
+
+  while (*str != '\0') {
+    if (*s++ != *str++) {
+      return false;
+    }
+  }
+
+  *sp = s;
+
+  return true;
+}
+
+static
+bool
+parse_hex16(const char **sp, uint16_t *out)
+{
+  const char *s   = *sp;
+  uint16_t    ret = 0;
+  uint16_t    i   = 0;
+  uint16_t    tmp = 0;
+  int         c   = 0;
+
+  for (i = 0; i < 4; i++) {
+    c = *s++;
+
+    if (c >= '0' && c <= '9') {
+      tmp = c - '0';
+    } else if (c >= 'A' && c <= 'F') {
+      tmp = c - 'A' + 10;
+    } else if (c >= 'a' && c <= 'f') {
+      tmp = c - 'a' + 10;
+    } else {
+      return false;
+    }
+
+    ret <<= 4;
+    ret  += tmp;
+  }
+
+  if (out) {
+    *out = ret;
+  }
+
+  *sp = s;
+
+  return true;
+}
+
+static
+bool
+parse_array(const char **sp, json_node_t **out)
+{
+  const char  *s   = *sp;
+  json_node_t *ret = out ? json_mkarray() : NULL;
+  json_node_t *elt = NULL;
+
+  if (*s++ != '[') {
+    goto failure;
+  }
+  skip_space(&s);
+
+  if (*s == ']') {
+    s++;
+    goto success;
+  }
+
+  for (;;) {
+    if (!parse_value(&s, out ? &elt : NULL)) {
+      goto failure;
+    }
+
+    skip_space(&s);
+
+    if (out) {
+      json_append_element(ret, elt);
+    }
+
+    if (*s == ']') {
+      s++;
+      goto success;
+    }
+
+    if (*s++ != ',') {
+      goto failure;
+    }
+
+    skip_space(&s);
+  }
+
+success:
+  *sp = s;
+  if (out) {
+    *out = ret;
+  }
+  return true;
+
+failure:
+  json_delete(ret);
+  return false;
+}
+
+static
+bool
+parse_object(const char **sp, json_node_t **out)
+{
+  const char  *s   = *sp;
+  json_node_t *ret = out ? json_mkobject() : NULL;
+  char        *key = NULL;
+  json_node_t *val;
+
+  if (*s++ != '{') {
+    goto failure;
+  }
+
+  skip_space(&s);
+
+  if (*s == '}') {
+    s++;
+    goto success;
+  }
+
+  for (;;) {
+    if (!parse_string(&s, out ? &key : NULL)) {
+      goto failure;
+    }
+
+    skip_space(&s);
+
+    if (*s++ != ':') {
+      goto failure_free_key;
+    }
+
+    skip_space(&s);
+
+    if (!parse_value(&s, out ? &val : NULL)) {
+      goto failure_free_key;
+    }
+
+    skip_space(&s);
+
+    if (out) {
+      append_member(ret, key, val);
+    }
+
+    if (*s == '}') {
+      s++;
+      goto success;
+    }
+
+    if (*s++ != ',') {
+      goto failure;
+    }
+
+    skip_space(&s);
+  }
+
+success:
+  *sp = s;
+  if (out) {
+    *out = ret;
+  }
+  return true;
+
+failure_free_key:
+  if (out) {
+    free(key);
+  }
+
+failure:
+  json_delete(ret);
+  return false;
+}
+
+static
+bool
+parse_value(const char **sp, json_node_t **out)
+{
+  const char *s = *sp;
+
+  switch (*s) {
+    case 'n':
+      if (expect_literal(&s, "null")) {
+        if (out) {
+          *out = json_mknull();
+        }
+
+        *sp = s;
+        return true;
+      }
+
+      return false;
+
+    case 'f':
+      if (expect_literal(&s, "false")) {
+        if (out) {
+          *out = json_mkbool(false);
+        }
+
+        *sp = s;
+        return true;
+      }
+
+      return false;
+
+    case 't':
+      if (expect_literal(&s, "true")) {
+        if (out) {
+          *out = json_mkbool(true);
+        }
+
+        *sp = s;
+        return true;
+      }
+
+      return false;
+
+    case '"': {
+      char *str = NULL;
+
+      if (parse_string(&s, out ? &str : NULL)) {
+        if (out) {
+          *out = mkstring(str);
+        }
+
+        *sp = s;
+        return true;
+      }
+
+      return false;
+    }
+
+    case '[':
+      if (parse_array(&s, out)) {
+        *sp = s;
+        return true;
+      }
+      return false;
+
+    case '{':
+      if (parse_object(&s, out)) {
+        *sp = s;
+        return true;
+      }
+
+      return false;
+
+    default: {
+      double num = 0.0;
+
+      if (parse_number(&s, out ? &num : NULL)) {
+        if (out) {
+          *out = json_mknumber(num);
+        }
+
+        *sp = s;
+        return true;
+      }
+
+      return false;
+    }
+  }
+}
+
+bool
+parse_string(const char **sp, char **out)
+{
+  const char *s      = *sp;
+  SB          sb     = { 0 };
+  char        tmp[4] = { 0 };
+  char       *b      = NULL;
+  
+  if (*s++ != '"') {
+    return false;
+  }
+
+  if (out) {
+    sb_init(&sb);
+    sb_need(&sb, 4);
+    b = sb.cur;
+  } else {
+    b = tmp;
+  }
+
+  while (*s != '"') {
+    unsigned char c = *s++;
+
+    if (c == '\\') {
+      c = *s++;
+      switch (c) {
+        case '"':
+        case '\\':
+        case '/':
+          *b++ = c;
+          break;
+        case 'b':
+          *b++ = '\b';
+          break;
+        case 'f':
+          *b++ = '\f';
+          break;
+        case 'n':
+          *b++ = '\n';
+          break;
+        case 'r':
+          *b++ = '\r';
+          break;
+        case 't':
+          *b++ = '\t';
+          break;
+        case 'u': {
+          uint16_t uc      = 0;
+          uint16_t lc      = 0;
+          uchar_t  unicode = 0;
+
+          if (!parse_hex16(&s, &uc)) {
+            goto failed;
+          }
+
+          if (uc >= 0xD800 && uc <= 0xDFFF) {
+            if (*s++ != '\\' || *s++ != 'u' || !parse_hex16(&s, &lc)) {
+              goto failed;
+            }
+
+            if (!from_surrogate_pair(uc, lc, &unicode)) {
+              goto failed;
+            }
+          } else if (uc == 0) {
+            goto failed;
+          } else {
+            unicode = uc;
+          }
+
+          b += utf8_write_char(unicode, b);
+          break;
+        }
+        default:
+          goto failed;
+      }
+    } else if (c <= 0x1F) {
+      goto failed;
+    } else {
+      int len = 0;
+      
+      s--;
+      len = utf8_validate_cz(s);
+      if (len == 0) {
+        goto failed;
+      }
+
+      while (len--) {
+        *b++ = *s++;
+      }
+
+    }
+
+    if (out) {
+      sb.cur = b;
+      sb_need(&sb, 4);
+      b = sb.cur;
+    } else {
+      b = tmp;
+    }
+  }
+  s++;
+
+  if (out) {
+    *out = sb_finish(&sb);
+  }
+
+  *sp = s;
+  return true;
+
+failed:
+  if (out) {
+    sb_free(&sb);
+  }
+
+  return false;
 }
 
 bool
