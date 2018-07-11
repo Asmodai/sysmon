@@ -251,6 +251,7 @@ void
 httpd_free(httpd_t *hs)
 {
   free(hs);
+  hs = NULL;
 }
 
 static

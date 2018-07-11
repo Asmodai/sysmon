@@ -49,6 +49,7 @@
 #include <string.h>
 
 #include "vtable.h"
+#include "utils.h"
 #include "sm_all.h"
 
 void
@@ -62,9 +63,7 @@ generate_json(sm_base_t *inst)
     return;
   }
 
-  if (inst->vtab->json_buffer != NULL) {
-    free(inst->vtab->json_buffer);
-  }
+  MAYBE_FREE(inst->vtab->json_buffer);
 
   if (inst->vtab->get_data != NULL) {
     (inst->vtab->get_data)(inst);
