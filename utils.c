@@ -157,4 +157,16 @@ strdecode(char *to, const char *from)
   *to = '\0';
 }
 
+void
+skip_space(const char **ptr)
+{
+  const char *s = *ptr;
+
+  while (isspace(*s)) {
+    s++;
+  }
+
+  *ptr = s;
+}
+
 /* utils.c ends here. */

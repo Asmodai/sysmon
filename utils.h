@@ -65,6 +65,7 @@ void          *xrealloc(void *, size_t);
 void          *xcalloc(size_t, size_t);
 unsigned long  pjw_hash(const char *);
 void           strdecode(char *, const char *);
+void           skip_space(const char **);
 
 #endif /* !_utils_h_ */
 
