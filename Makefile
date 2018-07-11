@@ -41,6 +41,7 @@
 CC=gcc
 
 CFLAGS=-Wall -pedantic -g -DDEBUG
+#CFLAGS=-Wall -pedantic -O2 -march=native
 
 BIN=sysmon
 
